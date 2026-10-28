@@ -15,20 +15,20 @@ This design refines the two supplied diagrams. Java implementations define physi
 - Time is simulation time, not wall-clock time. Any real-time pacing is an optional outer adapter.
 - Entity location and component state are authoritative within a simulation; event payloads are notifications, not a second source of truth.
 
-### Revision 2 – accepted corrections for the generic core (2026-10-28)
+### Revision 2 (2026-10-28)
 
-These override the sections below where they disagree. They are implemented in `src/main/java/ch/hsg/simulation`.
+Overrides the sections below where they differ. Rationale: [adr/](adr/README.md).
 
-1. **Real-time pacing is required for application compatibility.** The core keeps the logical clock and `step()`/`runUntil()`. A generic `RealTimeDriver` (runtime package, outside the engine) advances simulated time with the wall clock × speed factor. Adapters that must block like the hardware wait on `SimulationEngine.completionOf(commandId)`.
-2. **Actions have timed phases.** `ComponentExecutionResult` carries `List<ScheduledChange(offset, changes, events)>` instead of one `duration` plus `changes`. The engine schedules each phase at `now + offset`; the action completes with its last phase (`duration()` = last offset). Execution semantics (§8.1) are therefore event-scheduled, not synchronous.
-3. **All state changes go through `StateChange`**, including a component's own state (`UpdateComponentState`). The `Simulation` owns component state; components hold behavior and configuration only and read their state via `SimulationContext.stateOf(id)`. `Component.getState()` is replaced by `initialState()`. A batch of changes is applied atomically or not at all.
-4. **Entities have attributes** (`Map<String,Object>`, e.g. colour) instead of a separate `EntityState`. Positions with limited room are modelled as components with `getCapacity()`; entity location stays a component id. Connections are directed.
-5. **Faults (error cases).** The behaviour of a fault is implemented in the layout-specific component. The core only provides `FaultMode(id, description)`, `Component.getFaultModes()`, `SimulationEngine.setFault(...)` and `SimulationContext.isFaultActive(...)`. Faults must only change what the physical component would observably do; activation is recorded in the trace (`FAULT_ACTIVATED`/`FAULT_CLEARED`).
-6. **Sensors** are components that override `observe(context)`; the engine calls it after every commit and records state changes.
-7. **Busy components:** `SimulationContext.isBusy(id)` is true while an accepted action of that component has not completed. Whether a busy component rejects or queues is decided by the component (to be checked against the physical layout).
-8. **Trace is required:** every committed event is kept in `EventLog` (`SimulationEngine.events()`); listeners (future MQTT/UI adapters) are notified after commit and their failures never affect state.
-9. **Manager assigns ids:** `SimulationDefinition.create(UUID simulationId)`, so `reset` rebuilds the simulation under the same id. `stop` pauses; `reset` reconstructs from the definition (§8.4).
-10. **Layout-specific hardware interface** (later, not part of the core): each layout gets an adapter that reproduces the physical interface (e.g. HTTP commands + periodic MQTT status) and is bound to one simulation. The generic REST API in §7 is the control/test API only.
+1. Time: logical clock in the core; `RealTimeDriver` advances it with the wall clock for application use. Adapters wait on `SimulationEngine.completionOf(commandId)`.
+2. `ComponentExecutionResult` holds `List<ScheduledChange(offset, changes, events)>` instead of `duration` + `changes`. Actions are event-scheduled (§8.1).
+3. All changes, including a component's own state, are `StateChange`s. `Simulation` owns component state. `Component.getState()` is replaced by `initialState()`.
+4. `Entity` has `attributes` instead of `EntityState`. Components have `getCapacity()`. Connections are directed.
+5. Faults: core provides `FaultMode`, `Component.getFaultModes()`, `SimulationEngine.setFault(...)`, `SimulationContext.isFaultActive(...)`. The layout component implements the effect.
+6. Sensors override `Component.observe(context)`; the engine calls it after each commit.
+7. `SimulationContext.isBusy(id)` is true while an accepted action of the component is running. The component decides whether to reject.
+8. Event log is required: `SimulationEngine.events()`.
+9. `SimulationDefinition.create(UUID simulationId)`; the manager assigns ids. `stop` pauses, `reset` rebuilds with the same id (§8.4).
+10. The generic REST API (§7) is for control and tests. Applications use a layout-specific hardware-compatible adapter.
 
 ## 2. Package organization
 

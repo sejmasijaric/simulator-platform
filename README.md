@@ -1,34 +1,31 @@
 # Simulation Platform
 
-Generic simulation core for physical lab layouts (Fischertechnik Factory 4.0, Dobot + conveyor).
-Applications developed against the simulator should run unchanged on the physical layout.
+Simulation of physical lab layouts (Fischertechnik Factory 4.0, Dobot + conveyor). An application that works against the simulator should work against the physical layout without changes.
 
-The design is described in [docs/SIMULATION_CLASS_ARCHITECTURE.md](docs/SIMULATION_CLASS_ARCHITECTURE.md)
-(see "Revision 2" for the accepted corrections).
+- Class contracts: [docs/SIMULATION_CLASS_ARCHITECTURE.md](docs/SIMULATION_CLASS_ARCHITECTURE.md)
+- Diagrams: [docs/architecture.md](docs/architecture.md)
+- Decisions: [docs/adr](docs/adr/README.md)
 
 ## Status
 
-- Done: generic core (milestones 1–3): model, deterministic engine with timed phases, fault
-  mechanism, trace, manager, real-time driver. No framework dependencies.
-- Next: REST control adapter, first layout (Fischertechnik) with its hardware-compatible adapter.
+- Implemented: generic core (model, engine, faults, event log, manager, real-time driver).
+- Next: Fischertechnik layout, REST control API, hardware-compatible adapter.
 
-## Packages
+## Packages (`ch.hsg.simulation`)
 
-| Package | Contents |
+| Package | Classes |
 |---|---|
 | `api` | `SimulationDefinition`, `Component`, `Capability`, `ParameterType`, `FaultMode` |
-| `model` | `Simulation`, `Entity`, `ComponentState`, snapshots/views, exceptions |
+| `model` | `Simulation`, `Entity`, `ComponentState`, snapshots, exceptions |
 | `execution` | `ComponentAction`, `ComponentExecutionResult`, `ScheduledChange`, `StateChange` |
 | `event` | `SimulationEvent`, `EventType`, `EventLog` |
 | `runtime` | `SimulationManager`, `SimulationEngine`, `SimulationClock`, `EventQueue`, `SimulationContext`, `RealTimeDriver` |
 
-A layout implements `SimulationDefinition` and its `Component`s; see the test layout in
-`src/test/java/ch/hsg/simulation/testlayout` for a minimal example (slots, a two-phase
-transporter with a fault, a light-barrier sensor).
+Example layout: `src/test/java/ch/hsg/simulation/testlayout`.
 
-## Build and test
+## Build
 
-Requires Java 21+ and Maven.
+Java 21+, Maven.
 
 ```sh
 mvn test
