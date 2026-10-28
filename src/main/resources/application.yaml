@@ -1,0 +1,9 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: simulation-platform
+  jackson:
+    serialization:
+      write-durations-as-timestamps: false

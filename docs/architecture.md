@@ -53,7 +53,7 @@ flowchart TB
     log -. listeners .-> hw
 
     classDef planned stroke-dasharray: 5 5
-    class ui,rest,hw,ft,dobot planned
+    class ui,hw,ft,dobot planned
 ```
 
 ## 2. Core classes
