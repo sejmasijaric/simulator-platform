@@ -153,6 +153,12 @@ public final class Simulation {
                 .toList();
     }
 
+    public List<Connection> getConnections() {
+        List<Connection> result = new ArrayList<>();
+        connections.forEach((from, targets) -> targets.forEach(to -> result.add(new Connection(from, to))));
+        return result;
+    }
+
     public boolean isConnected(String fromId, String toId) {
         return connections.getOrDefault(fromId, Set.of()).contains(toId);
     }

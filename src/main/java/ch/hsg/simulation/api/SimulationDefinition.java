@@ -3,6 +3,7 @@ package ch.hsg.simulation.api;
 import ch.hsg.simulation.model.Simulation;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,6 +22,16 @@ public interface SimulationDefinition {
 
     default Optional<URI> getLayoutImage() {
         return Optional.empty();
+    }
+
+    /** Optional drawing hints for the UI. */
+    default Optional<LayoutView> getLayoutView() {
+        return Optional.empty();
+    }
+
+    /** Entities a user may place during setup. */
+    default List<EntityTemplate> getEntityTemplates() {
+        return List.of();
     }
 
     /**

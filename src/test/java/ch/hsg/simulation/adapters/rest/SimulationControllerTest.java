@@ -60,9 +60,12 @@ class SimulationControllerTest {
 
     @Test
     void listsDefinitions() throws Exception {
-        mvc.perform(get("/simulation-definitions"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("test-layout"));
+        JsonNode definitions = body(mvc.perform(get("/simulation-definitions")).andExpect(status().isOk()));
+        assertThat(definitions.findValuesAsText("id")).contains("test-layout", "demo");
+        JsonNode demo = definitions.findParents("id").stream()
+                .filter(node -> node.get("id").asText().equals("demo")).findFirst().orElseThrow();
+        assertThat(demo.at("/layoutView/positions/IN/x").asInt()).isPositive();
+        assertThat(demo.at("/entityTemplates/0/attributes/color").asText()).isEqualTo("red");
     }
 
     @Test
@@ -128,6 +131,40 @@ class SimulationControllerTest {
         assertThat(location).isEqualTo("OUT");
 
         mvc.perform(delete(simulation + "/real-time")).andExpect(jsonPath("$.enabled").value(false));
+    }
+
+    @Test
+    void placesAndRemovesEntities() throws Exception {
+        postJson(simulation + "/entities", """
+                {"type": "workpiece", "attributes": {"color": "blue"}, "componentId": "OUT"}""")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.entities[?(@.id == 'workpiece-1')].locationComponentId").value("OUT"));
+        postJson(simulation + "/entities", """
+                {"type": "workpiece", "componentId": "OUT"}""").andExpect(status().isBadRequest());
+
+        mvc.perform(delete(simulation + "/entities/workpiece-1")).andExpect(status().isOk());
+        mvc.perform(delete(simulation + "/entities/workpiece-1")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void awaitBlocksUntilTheActionCompletes() throws Exception {
+        putJson(simulation + "/real-time", "{\"speedFactor\": 50}");
+
+        postJson(simulation + "/components/T/actions?await=true", """
+                {"capability": "transport", "parameters": {"from": "IN", "to": "OUT"}, "origin": "application"}""")
+                .andExpect(status().isOk());
+
+        mvc.perform(get(simulation)).andExpect(jsonPath("$.entities[0].locationComponentId").value("OUT"));
+        JsonNode events = body(mvc.perform(get(simulation + "/events")));
+        assertThat(events.findParents("type").stream()
+                .filter(e -> e.get("type").asText().equals("ACTION_ACCEPTED"))
+                .map(e -> e.get("origin").asText())).containsExactly("application");
+    }
+
+    @Test
+    void awaitTimesOutWhenTimeDoesNotAdvance() throws Exception {
+        postJson(simulation + "/components/T/actions?await=true&timeout=PT0.2S", TRANSPORT)
+                .andExpect(status().isGatewayTimeout());
     }
 
     @Test

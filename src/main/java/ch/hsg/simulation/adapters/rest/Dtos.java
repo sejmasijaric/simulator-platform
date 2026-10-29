@@ -1,11 +1,14 @@
 package ch.hsg.simulation.adapters.rest;
 
+import ch.hsg.simulation.api.EntityTemplate;
+import ch.hsg.simulation.api.LayoutView;
 import ch.hsg.simulation.api.SimulationDefinition;
 import ch.hsg.simulation.execution.ComponentAction;
 import ch.hsg.simulation.execution.ComponentExecutionResult;
 import ch.hsg.simulation.execution.ExecutionStatus;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -15,9 +18,11 @@ final class Dtos {
     private Dtos() {
     }
 
-    record DefinitionResponse(String id, String name, String description) {
+    record DefinitionResponse(String id, String name, String description, LayoutView layoutView,
+                              List<EntityTemplate> entityTemplates) {
         static DefinitionResponse of(SimulationDefinition definition) {
-            return new DefinitionResponse(definition.getId(), definition.getName(), definition.getDescription());
+            return new DefinitionResponse(definition.getId(), definition.getName(), definition.getDescription(),
+                    definition.getLayoutView().orElse(null), definition.getEntityTemplates());
         }
     }
 
@@ -27,9 +32,9 @@ final class Dtos {
     record CreatedResponse(UUID id) {
     }
 
-    record ActionRequest(String capability, Map<String, Object> parameters) {
+    record ActionRequest(String capability, Map<String, Object> parameters, String origin) {
         ComponentAction toAction() {
-            return ComponentAction.of(capability, parameters != null ? parameters : Map.of());
+            return new ComponentAction(capability, parameters != null ? parameters : Map.of(), null, origin);
         }
     }
 
@@ -41,6 +46,9 @@ final class Dtos {
     }
 
     record FaultRequest(boolean active) {
+    }
+
+    record PlaceEntityRequest(String id, String type, Map<String, Object> attributes, String componentId) {
     }
 
     record RunUntilRequest(Duration time) {

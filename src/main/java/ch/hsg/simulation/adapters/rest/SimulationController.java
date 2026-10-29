@@ -6,6 +6,7 @@ import ch.hsg.simulation.adapters.rest.Dtos.CreateSimulationRequest;
 import ch.hsg.simulation.adapters.rest.Dtos.CreatedResponse;
 import ch.hsg.simulation.adapters.rest.Dtos.DefinitionResponse;
 import ch.hsg.simulation.adapters.rest.Dtos.FaultRequest;
+import ch.hsg.simulation.adapters.rest.Dtos.PlaceEntityRequest;
 import ch.hsg.simulation.adapters.rest.Dtos.RealTimeRequest;
 import ch.hsg.simulation.adapters.rest.Dtos.RealTimeResponse;
 import ch.hsg.simulation.adapters.rest.Dtos.RunUntilRequest;
@@ -29,8 +30,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /** Control and test API. Applications use the layout's hardware-compatible adapter instead (ADR 0009). */
 @RestController
@@ -109,14 +116,31 @@ public class SimulationController {
         return manager.getSimulation(id);
     }
 
+    /**
+     * Executes an action. With {@code await=true} the call blocks until the action has completed,
+     * like a blocking hardware command; time must advance meanwhile (real-time mode).
+     */
     @PostMapping("/simulations/{id}/components/{componentId}/actions")
     public ResponseEntity<ActionResponse> execute(@PathVariable UUID id, @PathVariable String componentId,
-                                                  @RequestBody ActionRequest request) {
+                                                  @RequestBody ActionRequest request,
+                                                  @RequestParam(defaultValue = "false") boolean await,
+                                                  @RequestParam(defaultValue = "PT60S") Duration timeout)
+            throws InterruptedException {
         if (request.capability() == null) {
             throw new IllegalArgumentException("capability is required");
         }
         ComponentAction action = request.toAction();
         ComponentExecutionResult result = manager.execute(id, componentId, action);
+        if (await && result.isExecuted()) {
+            try {
+                manager.engine(id).completionOf(action.commandId()).get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+                return ResponseEntity.ok(ActionResponse.of(action, result));
+            } catch (TimeoutException exception) {
+                return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(ActionResponse.of(action, result));
+            } catch (ExecutionException | CancellationException exception) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(ActionResponse.of(action, result));
+            }
+        }
         HttpStatus status = switch (result.status()) {
             case COMPLETED -> HttpStatus.OK;
             case ACCEPTED -> HttpStatus.ACCEPTED;
@@ -129,6 +153,23 @@ public class SimulationController {
     public SimulationSnapshot setFault(@PathVariable UUID id, @PathVariable String componentId,
                                        @PathVariable String faultId, @RequestBody FaultRequest request) {
         manager.setFault(id, componentId, faultId, request.active());
+        return manager.getSimulation(id);
+    }
+
+    @PostMapping("/simulations/{id}/entities")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SimulationSnapshot placeEntity(@PathVariable UUID id, @RequestBody PlaceEntityRequest request) {
+        if (request.type() == null || request.componentId() == null) {
+            throw new IllegalArgumentException("type and componentId are required");
+        }
+        manager.engine(id).placeEntity(request.id(), request.type(),
+                request.attributes() != null ? request.attributes() : Map.of(), request.componentId());
+        return manager.getSimulation(id);
+    }
+
+    @DeleteMapping("/simulations/{id}/entities/{entityId}")
+    public SimulationSnapshot removeEntity(@PathVariable UUID id, @PathVariable String entityId) {
+        manager.engine(id).removeEntity(entityId);
         return manager.getSimulation(id);
     }
 

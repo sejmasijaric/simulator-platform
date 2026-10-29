@@ -1,4 +1,4 @@
-package ch.hsg.simulation.testlayout;
+package ch.hsg.simulation.systems.demo;
 
 import ch.hsg.simulation.api.Capability;
 import ch.hsg.simulation.api.Component;

@@ -5,7 +5,7 @@ import ch.hsg.simulation.model.NotFoundException;
 import ch.hsg.simulation.model.SimulationStateException;
 import ch.hsg.simulation.model.SimulationStatus;
 import ch.hsg.simulation.testlayout.TestLayoutDefinition;
-import ch.hsg.simulation.testlayout.Transporter;
+import ch.hsg.simulation.systems.demo.Transporter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

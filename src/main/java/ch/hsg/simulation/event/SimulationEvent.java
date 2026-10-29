@@ -9,7 +9,8 @@ import java.util.UUID;
 
 /**
  * Something that happened inside one simulation. Components create drafts without a timestamp
- * via {@link #draft}; the engine stamps the simulated time and command correlation on commit.
+ * via {@link #draft}; the engine stamps simulated time, command id and origin on commit.
+ * {@code origin} is who caused the event, e.g. {@code application} or {@code control}.
  */
 public record SimulationEvent(
         UUID id,
@@ -17,6 +18,7 @@ public record SimulationEvent(
         String sourceComponentId,
         EventType type,
         UUID commandId,
+        String origin,
         Map<String, Object> payload) {
 
     public SimulationEvent {
@@ -26,11 +28,13 @@ public record SimulationEvent(
     }
 
     public static SimulationEvent draft(EventType type, String sourceComponentId, Map<String, ?> payload) {
-        return new SimulationEvent(UUID.randomUUID(), null, sourceComponentId, type, null, Attributes.copyOf(payload));
+        return new SimulationEvent(UUID.randomUUID(), null, sourceComponentId, type, null, null, Attributes.copyOf(payload));
     }
 
-    public SimulationEvent stamped(Duration time, UUID correlationId) {
+    public SimulationEvent stamped(Duration time, UUID correlationId, String causedBy) {
         return new SimulationEvent(id, time, sourceComponentId, type,
-                commandId != null ? commandId : correlationId, payload);
+                commandId != null ? commandId : correlationId,
+                origin != null ? origin : causedBy,
+                payload);
     }
 }

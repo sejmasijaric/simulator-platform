@@ -3,6 +3,9 @@ package ch.hsg.simulation.testlayout;
 import ch.hsg.simulation.api.SimulationDefinition;
 import ch.hsg.simulation.model.Entity;
 import ch.hsg.simulation.model.Simulation;
+import ch.hsg.simulation.systems.demo.LightBarrier;
+import ch.hsg.simulation.systems.demo.Slot;
+import ch.hsg.simulation.systems.demo.Transporter;
 
 import java.time.Duration;
 import java.util.Map;

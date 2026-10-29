@@ -2,7 +2,7 @@ package ch.hsg.simulation.runtime;
 
 import ch.hsg.simulation.execution.ComponentAction;
 import ch.hsg.simulation.testlayout.TestLayoutDefinition;
-import ch.hsg.simulation.testlayout.Transporter;
+import ch.hsg.simulation.systems.demo.Transporter;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;

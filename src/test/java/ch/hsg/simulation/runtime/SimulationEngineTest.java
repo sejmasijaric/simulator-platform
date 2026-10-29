@@ -8,9 +8,9 @@ import ch.hsg.simulation.execution.ExecutionStatus;
 import ch.hsg.simulation.model.NotFoundException;
 import ch.hsg.simulation.model.SimulationSnapshot;
 import ch.hsg.simulation.model.SimulationStateException;
-import ch.hsg.simulation.testlayout.LightBarrier;
+import ch.hsg.simulation.systems.demo.LightBarrier;
 import ch.hsg.simulation.testlayout.TestLayoutDefinition;
-import ch.hsg.simulation.testlayout.Transporter;
+import ch.hsg.simulation.systems.demo.Transporter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -231,6 +231,51 @@ class SimulationEngineTest {
         pool.shutdown();
 
         assertThat(accepted).isEqualTo(1);
+    }
+
+    @Test
+    void snapshotShowsRunningActivityAndConnections() {
+        ComponentAction action = transport("IN", "OUT").withOrigin(ComponentAction.ORIGIN_APPLICATION);
+        engine.execute("T", action);
+
+        var activities = engine.snapshot().component("T").orElseThrow().activities();
+        assertThat(activities).hasSize(1);
+        assertThat(activities.get(0).commandId()).isEqualTo(action.commandId());
+        assertThat(activities.get(0).origin()).isEqualTo("application");
+        assertThat(activities.get(0).endsAt()).isEqualTo(Duration.ofSeconds(4));
+        assertThat(engine.snapshot().connections()).extracting(c -> c.from() + ">" + c.to())
+                .containsExactlyInAnyOrder("IN>HOLD", "HOLD>OUT");
+        assertThat(engine.snapshot().component("IN").orElseThrow().capacity()).isEqualTo(1);
+        assertThat(engine.snapshot().component("T").orElseThrow().capacity()).isNull();
+
+        engine.runUntilIdle();
+        assertThat(engine.snapshot().component("T").orElseThrow().activities()).isEmpty();
+    }
+
+    @Test
+    void eventsCarryTheOriginOfTheirCommand() {
+        engine.execute("T", transport("IN", "OUT").withOrigin(ComponentAction.ORIGIN_APPLICATION));
+        engine.runUntilIdle();
+
+        assertThat(engine.events()).filteredOn(e -> e.type() == EventType.ENTITY_MOVED)
+                .extracting(SimulationEvent::origin).containsOnly("application");
+        assertThat(engine.events()).filteredOn(e -> e.type() == EventType.SIMULATION_STARTED)
+                .extracting(SimulationEvent::origin).containsOnly("control");
+    }
+
+    @Test
+    void entitiesCanBePlacedAndRemovedDuringSetup() {
+        String id = engine.placeEntity(null, "workpiece", Map.of("color", "blue"), "OUT");
+
+        assertThat(id).isEqualTo("workpiece-1");
+        assertThat(locationOf(id)).isEqualTo("OUT");
+        assertThat(engine.snapshot().component("LB").orElseThrow().state().attributes()).containsEntry("interrupted", true);
+        assertThatThrownBy(() -> engine.placeEntity(null, "workpiece", Map.of(), "OUT"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("full");
+
+        engine.removeEntity(id);
+        assertThat(engine.snapshot().entity(id)).isEmpty();
+        assertThatThrownBy(() -> engine.removeEntity(id)).isInstanceOf(NotFoundException.class);
     }
 
     @Test

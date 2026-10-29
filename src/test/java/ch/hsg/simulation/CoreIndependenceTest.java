@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** ADR 0001: core packages use no framework and no adapter. */
+/** ADR 0001: core packages use no framework, no adapter and no layout. */
 class CoreIndependenceTest {
 
     private static final List<String> CORE = List.of("api", "model", "execution", "event", "runtime");
@@ -25,7 +25,8 @@ class CoreIndependenceTest {
                     assertThat(source).as(file.toString())
                             .doesNotContain("import org.springframework")
                             .doesNotContain("import ch.hsg.simulation.adapters")
-                            .doesNotContain("import ch.hsg.simulation.app");
+                            .doesNotContain("import ch.hsg.simulation.app")
+                            .doesNotContain("import ch.hsg.simulation.systems");
                 }
             }
         }

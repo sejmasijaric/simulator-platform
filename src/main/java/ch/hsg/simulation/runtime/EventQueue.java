@@ -22,6 +22,7 @@ public final class EventQueue {
             Duration time,
             long sequence,
             UUID commandId,
+            String origin,
             String componentId,
             List<StateChange> changes,
             List<SimulationEvent> events,
@@ -32,13 +33,13 @@ public final class EventQueue {
             Comparator.comparing(ScheduledEntry::time).thenComparingLong(ScheduledEntry::sequence));
     private long nextSequence;
 
-    public ScheduledEntry schedule(Duration now, Duration time, UUID commandId, String componentId,
+    public ScheduledEntry schedule(Duration now, Duration time, UUID commandId, String origin, String componentId,
                                    List<StateChange> changes, List<SimulationEvent> events, boolean completesAction) {
         Objects.requireNonNull(time, "time");
         if (time.compareTo(now) < 0) {
             throw new IllegalArgumentException("Cannot schedule in the past: " + time + " < " + now);
         }
-        ScheduledEntry entry = new ScheduledEntry(time, nextSequence++, commandId, componentId,
+        ScheduledEntry entry = new ScheduledEntry(time, nextSequence++, commandId, origin, componentId,
                 List.copyOf(changes), List.copyOf(events), completesAction);
         entries.add(entry);
         return entry;

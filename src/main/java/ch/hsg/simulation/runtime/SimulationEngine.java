@@ -11,6 +11,8 @@ import ch.hsg.simulation.execution.ComponentExecutionResult;
 import ch.hsg.simulation.execution.ExecutionStatus;
 import ch.hsg.simulation.execution.ScheduledChange;
 import ch.hsg.simulation.execution.StateChange;
+import ch.hsg.simulation.model.Attributes;
+import ch.hsg.simulation.model.ComponentActivity;
 import ch.hsg.simulation.model.ComponentState;
 import ch.hsg.simulation.model.ComponentView;
 import ch.hsg.simulation.model.EntityView;
@@ -24,6 +26,7 @@ import ch.hsg.simulation.model.SimulationStatus;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -54,6 +57,8 @@ import java.util.stream.Collectors;
  */
 public final class SimulationEngine implements AutoCloseable {
 
+    private static final String ORIGIN_CONTROL = ComponentAction.ORIGIN_CONTROL;
+
     private Simulation simulation;
     private final SimulationClock clock = new SimulationClock();
     private final EventQueue eventQueue = new EventQueue();
@@ -61,8 +66,9 @@ public final class SimulationEngine implements AutoCloseable {
     private final SimulationContext context = new EngineContext();
 
     private final Map<String, Set<String>> activeFaults = new HashMap<>();
-    private final Map<String, Integer> pendingActions = new HashMap<>();
+    private final Map<String, List<ComponentActivity>> activities = new HashMap<>();
     private final Map<UUID, CompletableFuture<SimulationEvent>> completions = new ConcurrentHashMap<>();
+    private long entitySequence;
 
     private final ExecutorService commandExecutor;
     private volatile Thread loopThread;
@@ -87,7 +93,7 @@ public final class SimulationEngine implements AutoCloseable {
                 throw new SimulationStateException("Cannot start simulation in status " + status);
             }
             simulation.setStatus(SimulationStatus.RUNNING);
-            publish(SimulationEvent.draft(EventType.SIMULATION_STARTED, null, Map.of()), null);
+            publish(SimulationEvent.draft(EventType.SIMULATION_STARTED, null, Map.of()), null, ORIGIN_CONTROL);
             return null;
         });
     }
@@ -97,7 +103,7 @@ public final class SimulationEngine implements AutoCloseable {
         call(() -> {
             requireRunning();
             simulation.setStatus(SimulationStatus.STOPPED);
-            publish(SimulationEvent.draft(EventType.SIMULATION_STOPPED, null, Map.of()), null);
+            publish(SimulationEvent.draft(EventType.SIMULATION_STOPPED, null, Map.of()), null, ORIGIN_CONTROL);
             return null;
         });
     }
@@ -115,11 +121,12 @@ public final class SimulationEngine implements AutoCloseable {
             clock.reset();
             eventQueue.clear();
             activeFaults.clear();
-            pendingActions.clear();
+            activities.clear();
             completions.values().forEach(future -> future.cancel(false));
             completions.clear();
             eventLog.clear();
-            publish(SimulationEvent.draft(EventType.SIMULATION_RESET, null, Map.of()), null);
+            entitySequence = 0;
+            publish(SimulationEvent.draft(EventType.SIMULATION_RESET, null, Map.of()), null, ORIGIN_CONTROL);
             return null;
         });
     }
@@ -176,6 +183,34 @@ public final class SimulationEngine implements AutoCloseable {
         });
     }
 
+    // ---- setup (control only, any lifecycle state) ----
+
+    /**
+     * Places a new entity at a component, e.g. a workpiece put into the input tray by hand.
+     * Returns the entity id; a missing id is generated.
+     */
+    public String placeEntity(String entityId, String type, Map<String, ?> attributes, String componentId) {
+        Objects.requireNonNull(type, "type");
+        Objects.requireNonNull(componentId, "componentId");
+        return call(() -> {
+            requireComponent(componentId);
+            String id = entityId != null && !entityId.isBlank() ? entityId : nextEntityId(type);
+            applyControlChange(new StateChange.CreateEntity(id, type, Attributes.copyOf(attributes), componentId));
+            return id;
+        });
+    }
+
+    /** Removes an entity, e.g. a finished workpiece taken out by hand. */
+    public void removeEntity(String entityId) {
+        call(() -> {
+            if (simulation.findEntity(entityId).isEmpty()) {
+                throw new NotFoundException("Unknown entity: " + entityId);
+            }
+            applyControlChange(new StateChange.RemoveEntity(entityId));
+            return null;
+        });
+    }
+
     // ---- faults ----
 
     public void setFault(String componentId, String faultId, boolean active) {
@@ -189,8 +224,8 @@ public final class SimulationEngine implements AutoCloseable {
             boolean changed = active ? faults.add(faultId) : faults.remove(faultId);
             if (changed) {
                 publish(SimulationEvent.draft(active ? EventType.FAULT_ACTIVATED : EventType.FAULT_CLEARED,
-                        componentId, Map.of("fault", faultId)), null);
-                observeComponents();
+                        componentId, Map.of("fault", faultId)), null, ORIGIN_CONTROL);
+                observeComponents(ORIGIN_CONTROL);
             }
             return null;
         });
@@ -258,16 +293,18 @@ public final class SimulationEngine implements AutoCloseable {
             return reject(componentId, action, result);
         }
 
-        completions.put(action.commandId(), new CompletableFuture<>());
-        pendingActions.merge(componentId, 1, Integer::sum);
-        publish(SimulationEvent.draft(EventType.ACTION_ACCEPTED, componentId, actionPayload(action, result)),
-                action.commandId());
-
         Duration start = clock.now();
+        completions.put(action.commandId(), new CompletableFuture<>());
+        activities.computeIfAbsent(componentId, key -> new ArrayList<>()).add(new ComponentActivity(
+                action.commandId(), action.capability(), action.parameters(), action.origin(),
+                start, start.plus(result.duration())));
+        publish(SimulationEvent.draft(EventType.ACTION_ACCEPTED, componentId, actionPayload(action, result)),
+                action.commandId(), action.origin());
+
         List<ScheduledChange> phases = result.phases();
         for (int index = 0; index < phases.size(); index++) {
             ScheduledChange phase = phases.get(index);
-            eventQueue.schedule(start, start.plus(phase.offset()), action.commandId(), componentId,
+            eventQueue.schedule(start, start.plus(phase.offset()), action.commandId(), action.origin(), componentId,
                     phase.changes(), phase.events(), index == phases.size() - 1);
         }
         processDueUntil(start);
@@ -275,13 +312,30 @@ public final class SimulationEngine implements AutoCloseable {
     }
 
     private ComponentExecutionResult reject(String componentId, ComponentAction action, ComponentExecutionResult result) {
-        EventType type = result.status() == ExecutionStatus.FAILED
-                ? EventType.ACTION_FAILED : EventType.ACTION_REJECTED;
+        EventType type = result.status() == ExecutionStatus.FAILED ? EventType.ACTION_FAILED : EventType.ACTION_REJECTED;
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("capability", action.capability());
+        payload.put("parameters", action.parameters());
         payload.put("reason", result.errorMessage().orElse(""));
-        publish(SimulationEvent.draft(type, componentId, payload), action.commandId());
+        publish(SimulationEvent.draft(type, componentId, payload), action.commandId(), action.origin());
         return result;
+    }
+
+    private void applyControlChange(StateChange change) {
+        try {
+            simulation.apply(List.of(change)).forEach(event -> publish(event, null, ORIGIN_CONTROL));
+        } catch (InvalidStateChangeException exception) {
+            throw new IllegalArgumentException(exception.getMessage(), exception);
+        }
+        observeComponents(ORIGIN_CONTROL);
+    }
+
+    private String nextEntityId(String type) {
+        String id;
+        do {
+            id = type + "-" + (++entitySequence);
+        } while (simulation.findEntity(id).isPresent());
+        return id;
     }
 
     private void processDueUntil(Duration target) {
@@ -297,19 +351,26 @@ public final class SimulationEngine implements AutoCloseable {
         clock.advanceTo(entry.time());
         try {
             List<SimulationEvent> applied = simulation.apply(entry.changes());
-            applied.forEach(event -> publish(event, entry.commandId()));
-            entry.events().forEach(event -> publish(event, entry.commandId()));
+            applied.forEach(event -> publish(event, entry.commandId(), entry.origin()));
+            entry.events().forEach(event -> publish(event, entry.commandId(), entry.origin()));
         } catch (InvalidStateChangeException exception) {
             publish(SimulationEvent.draft(EventType.CHANGE_REJECTED, entry.componentId(),
-                    Map.of("reason", exception.getMessage())), entry.commandId());
+                    Map.of("reason", exception.getMessage())), entry.commandId(), entry.origin());
         }
         if (entry.completesAction()) {
-            pendingActions.computeIfPresent(entry.componentId(), (key, count) -> count > 1 ? count - 1 : null);
+            List<ComponentActivity> running = activities.get(entry.componentId());
+            if (running != null) {
+                running.removeIf(activity -> activity.commandId().equals(entry.commandId()));
+                if (running.isEmpty()) {
+                    activities.remove(entry.componentId());
+                }
+            }
         }
-        observeComponents();
+        observeComponents(entry.origin());
         if (entry.completesAction()) {
             SimulationEvent completed = publish(
-                    SimulationEvent.draft(EventType.ACTION_COMPLETED, entry.componentId(), Map.of()), entry.commandId());
+                    SimulationEvent.draft(EventType.ACTION_COMPLETED, entry.componentId(), Map.of()),
+                    entry.commandId(), entry.origin());
             CompletableFuture<SimulationEvent> future = completions.get(entry.commandId());
             if (future != null) {
                 future.complete(completed);
@@ -318,7 +379,7 @@ public final class SimulationEngine implements AutoCloseable {
     }
 
     /** One pass over all components so sensors can update their observed state. */
-    private void observeComponents() {
+    private void observeComponents(String origin) {
         for (Component component : simulation.getComponents()) {
             Optional<ComponentState> observed;
             try {
@@ -328,13 +389,13 @@ public final class SimulationEngine implements AutoCloseable {
             }
             if (observed.isPresent() && !observed.get().equals(simulation.stateOf(component.getId()))) {
                 simulation.apply(List.of(StateChange.componentState(component.getId(), observed.get())))
-                        .forEach(event -> publish(event, null));
+                        .forEach(event -> publish(event, null, origin));
             }
         }
     }
 
-    private SimulationEvent publish(SimulationEvent draft, UUID commandId) {
-        SimulationEvent event = draft.stamped(clock.now(), commandId);
+    private SimulationEvent publish(SimulationEvent draft, UUID commandId, String origin) {
+        SimulationEvent event = draft.stamped(clock.now(), commandId, origin);
         eventLog.append(event);
         return event;
     }
@@ -342,17 +403,19 @@ public final class SimulationEngine implements AutoCloseable {
     private SimulationSnapshot buildSnapshot() {
         List<ComponentView> components = new ArrayList<>();
         for (Component component : simulation.getComponents()) {
+            int capacity = component.getCapacity();
             components.add(new ComponentView(
                     component.getId(),
                     component.getType(),
                     simulation.stateOf(component.getId()),
                     component.getCapabilities().stream().map(Capability::name).collect(Collectors.toSet()),
-                    component.getFaultModes().stream().map(FaultMode::id).collect(Collectors.toSet()),
+                    capacity == Component.UNLIMITED_CAPACITY ? null : capacity,
+                    component.getFaultModes().stream().sorted(Comparator.comparing(FaultMode::id)).toList(),
                     activeFaults.getOrDefault(component.getId(), Set.of()),
-                    pendingActions.containsKey(component.getId())));
+                    activities.getOrDefault(component.getId(), List.of())));
         }
         return new SimulationSnapshot(simulation.getId(), simulation.getDefinitionId(), simulation.getName(),
-                simulation.getStatus(), clock.now(), components, simulation.getEntities());
+                simulation.getStatus(), clock.now(), components, simulation.getConnections(), simulation.getEntities());
     }
 
     private Component requireComponent(String componentId) {
@@ -438,7 +501,7 @@ public final class SimulationEngine implements AutoCloseable {
 
         @Override
         public boolean isBusy(String componentId) {
-            return pendingActions.containsKey(componentId);
+            return activities.containsKey(componentId);
         }
 
         @Override

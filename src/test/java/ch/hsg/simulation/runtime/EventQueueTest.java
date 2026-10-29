@@ -13,9 +13,9 @@ class EventQueueTest {
     @Test
     void ordersByTimeThenInsertion() {
         EventQueue queue = new EventQueue();
-        queue.schedule(Duration.ZERO, Duration.ofSeconds(2), null, "b", List.of(), List.of(), false);
-        queue.schedule(Duration.ZERO, Duration.ofSeconds(1), null, "a", List.of(), List.of(), false);
-        queue.schedule(Duration.ZERO, Duration.ofSeconds(2), null, "c", List.of(), List.of(), false);
+        queue.schedule(Duration.ZERO, Duration.ofSeconds(2), null, null, "b", List.of(), List.of(), false);
+        queue.schedule(Duration.ZERO, Duration.ofSeconds(1), null, null, "a", List.of(), List.of(), false);
+        queue.schedule(Duration.ZERO, Duration.ofSeconds(2), null, null, "c", List.of(), List.of(), false);
 
         assertThat(List.of(
                 queue.poll().orElseThrow().componentId(),
@@ -27,7 +27,7 @@ class EventQueueTest {
     @Test
     void rejectsSchedulingInThePast() {
         EventQueue queue = new EventQueue();
-        assertThatThrownBy(() -> queue.schedule(Duration.ofSeconds(5), Duration.ofSeconds(1), null, "a", List.of(), List.of(), false))
+        assertThatThrownBy(() -> queue.schedule(Duration.ofSeconds(5), Duration.ofSeconds(1), null, null, "a", List.of(), List.of(), false))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

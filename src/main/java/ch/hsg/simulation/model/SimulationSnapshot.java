@@ -13,10 +13,12 @@ public record SimulationSnapshot(
         SimulationStatus status,
         Duration time,
         List<ComponentView> components,
+        List<Connection> connections,
         List<EntityView> entities) {
 
     public SimulationSnapshot {
         components = List.copyOf(components);
+        connections = List.copyOf(connections);
         entities = List.copyOf(entities);
     }
 
