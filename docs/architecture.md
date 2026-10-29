@@ -28,7 +28,7 @@ flowchart TB
     end
 
     subgraph layouts["Layouts"]
-        test["Test layout"]
+        test["Demo layout"]
         ft["Fischertechnik Factory 4.0"]
         dobot["Dobot + conveyor"]
     end
@@ -53,7 +53,7 @@ flowchart TB
     log -. listeners .-> hw
 
     classDef planned stroke-dasharray: 5 5
-    class ui,hw,ft,dobot planned
+    class hw,ft,dobot planned
 ```
 
 ## 2. Core classes

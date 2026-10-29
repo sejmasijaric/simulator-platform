@@ -8,7 +8,7 @@ Simulation of physical lab layouts (Fischertechnik Factory 4.0, Dobot + conveyor
 
 ## Status
 
-- Implemented: generic core (model, engine, faults, event log, manager, real-time driver), REST control API.
+- Implemented: generic core, REST control API, web UI, demo layout and demo process.
 - Next: Fischertechnik layout, hardware-compatible adapter.
 
 ## Packages (`ch.hsg.simulation`)
@@ -22,6 +22,9 @@ Simulation of physical lab layouts (Fischertechnik Factory 4.0, Dobot + conveyor
 | `runtime` | `SimulationManager`, `SimulationEngine`, `SimulationClock`, `EventQueue`, `SimulationContext`, `RealTimeDriver` |
 | `app` | Spring Boot application, wiring, `RealTimeService` |
 | `adapters.rest` | REST control API |
+| `systems.demo` | Demo layout: slots, transporter, conveyor, light barriers |
+
+The web UI is in `web/` (React, TypeScript, Vite).
 
 Core packages (`api`, `model`, `execution`, `event`, `runtime`) must not import Spring, `app` or `adapters`; `CoreIndependenceTest` checks this. A layout is registered by declaring its `SimulationDefinition` as a Spring bean.
 
@@ -29,14 +32,31 @@ Example layout: `src/test/java/ch/hsg/simulation/testlayout`.
 
 ## Build and run
 
-Java 21+, Maven.
+Java 21+, Maven. Maven downloads a project-local Node to build the UI; no Node installation needed.
 
 ```sh
-mvn test
-mvn spring-boot:run
+mvn package
+java -jar target/simulation-platform-0.1.0-SNAPSHOT.jar
 ```
 
-The API runs on port 8080.
+UI and API run on http://localhost:8080. `-Dweb.skip=true` skips the UI build (faster for backend work).
+
+To see the UI driven like by an application, run the demo process: [tools/demo](tools/demo/README.md).
+
+UI development with hot reload (backend running on 8080):
+
+```sh
+cd web && PATH=$PWD/node:$PATH ./node/npm run dev
+```
+
+## Web UI
+
+The application (e.g. a Camunda process via the hardware-compatible adapter) drives the simulator. The UI does not send machine commands. It is for watching, preparing and disturbing a run (ADR 0010):
+
+- Floor: positions, machines with progress, sensors, workpieces moving between positions.
+- Story: what happened, with who caused it (application or you).
+- Inspector: state, running task, workpieces and faults of a component.
+- Place and remove workpieces, switch faults, pause, change speed, step, reset.
 
 ## Control API
 
@@ -52,8 +72,10 @@ For the Web UI and tests. Applications use the layout's hardware-compatible adap
 | POST | `/simulations/{id}/start` \| `stop` \| `reset` | | snapshot |
 | POST | `/simulations/{id}/step` | | `{"stepped": true, "time": "PT2S"}` |
 | POST | `/simulations/{id}/run-until` | `{"time": "PT10S"}` | snapshot |
-| POST | `/simulations/{id}/components/{componentId}/actions` | `{"capability": "...", "parameters": {...}}` | 200 completed, 202 accepted, 422 rejected/failed |
+| POST | `/simulations/{id}/components/{componentId}/actions[?await=true&timeout=PT60S]` | `{"capability": "...", "parameters": {...}, "origin": "application"}` | 200 completed, 202 accepted, 422 rejected/failed; with `await`: 200 when finished, 504 on timeout |
 | PUT | `/simulations/{id}/components/{componentId}/faults/{faultId}` | `{"active": true}` | snapshot |
+| POST | `/simulations/{id}/entities` | `{"type": "workpiece", "attributes": {...}, "componentId": "IN"}` | 201, snapshot |
+| DELETE | `/simulations/{id}/entities/{entityId}` | | snapshot |
 | GET | `/simulations/{id}/events?from=0` | | events from index `from` |
 | PUT | `/simulations/{id}/real-time` | `{"speedFactor": 1.0}` | starts the real-time driver |
 | DELETE | `/simulations/{id}/real-time` | | stops it |

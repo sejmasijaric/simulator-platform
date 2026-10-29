@@ -11,3 +11,4 @@
 | [0007](0007-sensors-as-observing-components.md) | Sensors derive their value from the model | Accepted |
 | [0008](0008-event-log-as-trace-and-integration-point.md) | Event log for trace and adapters | Accepted |
 | [0009](0009-hardware-compatible-interface-per-layout.md) | Hardware-compatible adapter per layout | Proposed |
+| [0010](0010-web-ui-observes-application-drives.md) | Web UI observes and prepares, the application drives | Accepted |

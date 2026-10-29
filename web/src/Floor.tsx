@@ -1,0 +1,156 @@
+import type { ComponentView, EntityView, Snapshot } from './types';
+import { entityColor, kindOf, type FloorLayout } from './layout';
+import { seconds } from './time';
+
+const PAD = { w: 96, h: 56 };
+const MACHINE = { w: 170, h: 72 };
+
+interface Props {
+  snapshot: Snapshot;
+  layout: FloorLayout;
+  now: number;
+  selectedId: string | null;
+  highlightId: string | null;
+  placing: boolean;
+  faultMode: boolean;
+  onSelectComponent: (id: string) => void;
+  onSelectEntity: (id: string) => void;
+}
+
+export function Floor(props: Props) {
+  const { snapshot, layout } = props;
+  const at = (id: string) => layout.positions[id] ?? { x: 0, y: 0 };
+
+  return (
+    <svg className="floor" viewBox={`0 0 ${layout.width} ${layout.height}`} role="img" aria-label="Lab floor">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="var(--line-strong)" strokeWidth="1.5" strokeLinecap="round" />
+        </marker>
+      </defs>
+      {layout.background && (
+        <image href={layout.background} x={0} y={0} width={layout.width} height={layout.height} opacity={0.9} />
+      )}
+
+      {snapshot.connections.map((connection) => {
+        const a = at(connection.from);
+        const b = at(connection.to);
+        const length = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        const shrink = (p: { x: number; y: number }, q: { x: number; y: number }) => ({
+          x: p.x + ((q.x - p.x) / length) * 56,
+          y: p.y + ((q.y - p.y) / length) * 40,
+        });
+        const start = shrink(a, b);
+        const end = shrink(b, a);
+        return (
+          <path key={`${connection.from}-${connection.to}`} d={`M${start.x} ${start.y} L${end.x} ${end.y}`}
+                stroke="var(--line-strong)" strokeWidth={2} strokeDasharray="5 7" fill="none" markerEnd="url(#arrow)" />
+        );
+      })}
+
+      {snapshot.components.map((component) => {
+        const kind = kindOf(component);
+        const point = at(component.id);
+        const classes = ['node',
+          props.selectedId === component.id ? 'selected' : '',
+          props.highlightId === component.id ? 'highlight' : '',
+          props.placing && kind === 'position' ? 'target' : ''].join(' ');
+        return (
+          <g key={component.id} className={classes} onClick={() => props.onSelectComponent(component.id)}>
+            {kind === 'position' && <Pad component={component} x={point.x} y={point.y} />}
+            {kind === 'machine' && <Machine component={component} x={point.x} y={point.y} now={props.now} />}
+            {kind === 'sensor' && <Sensor component={component} x={point.x} y={point.y} />}
+            {props.faultMode && component.faultModes.length > 0 && (
+              <FaultBadge component={component} x={point.x} y={point.y} kind={kind} />
+            )}
+            {!props.faultMode && component.activeFaults.length > 0 && (
+              <FaultBadge component={component} x={point.x} y={point.y} kind={kind} />
+            )}
+          </g>
+        );
+      })}
+
+      {snapshot.entities.map((entity) => (
+        <Puck key={entity.id} entity={entity} snapshot={snapshot} layout={layout} onSelect={props.onSelectEntity} />
+      ))}
+    </svg>
+  );
+}
+
+function Pad({ component, x, y }: { component: ComponentView; x: number; y: number }) {
+  return (
+    <>
+      <rect className="shape" x={x - PAD.w / 2} y={y - PAD.h / 2} width={PAD.w} height={PAD.h} rx={14}
+            fill="var(--surface-2)" stroke="var(--line-strong)" strokeWidth={1.2} />
+      <text className="label" x={x} y={y + PAD.h / 2 + 20} textAnchor="middle">{component.id}</text>
+    </>
+  );
+}
+
+function Machine({ component, x, y, now }: { component: ComponentView; x: number; y: number; now: number }) {
+  const activity = component.activities[0];
+  const start = seconds(activity?.startedAt);
+  const end = seconds(activity?.endsAt);
+  const progress = activity ? Math.min(1, Math.max(0, (now - start) / Math.max(end - start, 0.001))) : 0;
+  const left = x - MACHINE.w / 2;
+  const top = y - MACHINE.h / 2;
+  return (
+    <>
+      <rect className="shape" x={left} y={top} width={MACHINE.w} height={MACHINE.h} rx={14}
+            fill={activity ? 'var(--accent-bg)' : 'var(--surface)'} stroke="var(--line-strong)" strokeWidth={1.2} />
+      <text className="title" x={left + 14} y={top + 24}>{component.id}</text>
+      {activity?.origin === 'application'
+        ? <text className="label" x={left + MACHINE.w - 14} y={top + 24} textAnchor="end" style={{ fill: 'var(--app)' }}>application</text>
+        : <text className="label" x={left + MACHINE.w - 14} y={top + 24} textAnchor="end">{component.type}</text>}
+      <text className="label" x={left + 14} y={top + 46}>
+        {activity ? `${activity.capability} · ${Math.max(0, end - now).toFixed(1)} s` : 'idle'}
+      </text>
+      <rect x={left + 14} y={top + 56} width={MACHINE.w - 28} height={5} rx={2.5} fill="var(--line)" />
+      <rect x={left + 14} y={top + 56} width={(MACHINE.w - 28) * progress} height={5} rx={2.5} fill="var(--accent)" />
+    </>
+  );
+}
+
+function Sensor({ component, x, y }: { component: ComponentView; x: number; y: number }) {
+  const lit = Object.values(component.state.attributes).some((value) => value === true);
+  return (
+    <>
+      <circle className="shape" cx={x} cy={y} r={12} fill={lit ? 'var(--warn-line)' : 'var(--surface)'}
+              stroke="var(--line-strong)" strokeWidth={1.5} />
+      {lit && <circle cx={x} cy={y} r={20} fill="none" stroke="var(--warn-line)" strokeOpacity={0.35} strokeWidth={6} />}
+      <text className="label" x={x} y={y - 24} textAnchor="middle">{component.id}</text>
+    </>
+  );
+}
+
+function FaultBadge({ component, x, y, kind }: { component: ComponentView; x: number; y: number; kind: string }) {
+  const active = component.activeFaults.length > 0;
+  const offset = kind === 'machine' ? { x: MACHINE.w / 2, y: -MACHINE.h / 2 } : kind === 'position' ? { x: PAD.w / 2, y: -PAD.h / 2 } : { x: 24, y: 0 };
+  return (
+    <g transform={`translate(${x + offset.x}, ${y + offset.y})`}>
+      <circle r={11} fill={active ? 'var(--warn-line)' : 'var(--warn-bg)'} stroke="var(--warn-line)" strokeWidth={1.2} />
+      <text textAnchor="middle" dy={4} style={{ fontSize: 12, fontWeight: 700, fill: active ? '#fff' : 'var(--warn)' }}>
+        {active ? '!' : '?'}
+      </text>
+    </g>
+  );
+}
+
+function Puck({ entity, snapshot, layout, onSelect }: {
+  entity: EntityView; snapshot: Snapshot; layout: FloorLayout; onSelect: (id: string) => void;
+}) {
+  if (!entity.locationComponentId) return null;
+  const point = layout.positions[entity.locationComponentId];
+  if (!point) return null;
+  const neighbours = snapshot.entities.filter((e) => e.locationComponentId === entity.locationComponentId);
+  const index = neighbours.findIndex((e) => e.id === entity.id);
+  const dx = (index - (neighbours.length - 1) / 2) * 30;
+  return (
+    <g className="puck" style={{ transform: `translate(${point.x + dx}px, ${point.y}px)` }}
+       onClick={(event) => { event.stopPropagation(); onSelect(entity.id); }}>
+      <circle r={16} fill={entityColor(entity.attributes)} stroke="rgba(0,0,0,0.35)" strokeWidth={1.2} />
+      <circle r={6} fill="rgba(255,255,255,0.35)" />
+      <title>{entity.id}</title>
+    </g>
+  );
+}
