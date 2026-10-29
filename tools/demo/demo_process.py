@@ -29,9 +29,22 @@ def call(method, url, body=None):
         return error.code, json.loads(text) if text else None
 
 
+def wait_for(base, seconds=90):
+    deadline = time.time() + seconds
+    while True:
+        try:
+            call("GET", f"{base}/simulations")
+            return
+        except (urllib.error.URLError, ConnectionError):
+            if time.time() > deadline:
+                raise
+            time.sleep(1)
+
+
 def find_or_create(base, simulation_id):
     if simulation_id:
         return simulation_id
+    wait_for(base)
     _, simulations = call("GET", f"{base}/simulations")
     for simulation in simulations or []:
         if simulation["definitionId"] == "demo":

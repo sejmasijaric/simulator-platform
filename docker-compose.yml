@@ -1,0 +1,28 @@
+# Simulator with UI on http://localhost:8080 and an MQTT broker on localhost:1883.
+#   docker compose up --build                  simulator + broker
+#   docker compose --profile demo up --build   also runs the demo process
+services:
+  simulator:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mosquitto
+
+  # Broker for the hardware-compatible adapters (MQTT status messages). Not used by the
+  # simulator yet; applications connect to it instead of the lab broker.
+  mosquitto:
+    image: eclipse-mosquitto:2.0.20
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  demo:
+    profiles: ["demo"]
+    image: python:3.12-alpine
+    volumes:
+      - ./tools/demo:/demo:ro
+    command: ["python3", "-u", "/demo/demo_process.py", "--url", "http://simulator:8080"]
+    depends_on:
+      - simulator

@@ -43,6 +43,15 @@ UI and API run on http://localhost:8080. `-Dweb.skip=true` skips the UI build (f
 
 To see the UI driven like by an application, run the demo process: [tools/demo](tools/demo/README.md).
 
+With Docker (no Java needed):
+
+```sh
+docker compose up --build                  # simulator on :8080, MQTT broker on :1883
+docker compose --profile demo up --build   # plus the demo process
+```
+
+The broker is for the hardware-compatible adapters; the simulator does not use it yet.
+
 UI development with hot reload (backend running on 8080):
 
 ```sh
