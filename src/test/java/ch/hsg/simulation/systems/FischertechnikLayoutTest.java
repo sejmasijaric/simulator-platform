@@ -5,12 +5,14 @@ import ch.hsg.simulation.execution.ExecutionStatus;
 import ch.hsg.simulation.model.SimulationSnapshot;
 import ch.hsg.simulation.runtime.SimulationEngine;
 import ch.hsg.simulation.systems.fischertechnik.FischertechnikLayoutDefinition;
+import ch.hsg.simulation.systems.fischertechnik.HighBayWarehouse;
 import ch.hsg.simulation.systems.fischertechnik.MillingMachine;
 import ch.hsg.simulation.systems.fischertechnik.Oven;
 import ch.hsg.simulation.systems.fischertechnik.SortingMachine;
 import ch.hsg.simulation.systems.fischertechnik.Transport;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -39,6 +41,38 @@ class FischertechnikLayoutTest {
             assertThat(location(engine.snapshot())).isEqualTo("sink_1");
             assertThat(lightBarrier(engine.snapshot(), "sm_1_lb6")).isTrue();
             assertThat(lightBarrier(engine.snapshot(), "vgr_1_lb7")).isFalse();
+        }
+    }
+
+    @Test
+    void ovenLightBarrierIsFreeWhileTheWorkpieceIsInside() {
+        try (SimulationEngine engine = startedEngine()) {
+            engine.placeEntity("wp", "workpiece", Map.of("color", "red"), "oven");
+            engine.execute("ov_1", ComponentAction.of(Oven.BURN, Map.of("time", 2)));
+
+            engine.runUntil(Duration.ofSeconds(6));
+            assertThat(location(engine.snapshot())).isEqualTo("oven_chamber");
+            assertThat(lightBarrier(engine.snapshot(), "ov_1_lb5")).isFalse();
+
+            engine.runUntilIdle();
+            assertThat(location(engine.snapshot())).isEqualTo("oven");
+            assertThat(lightBarrier(engine.snapshot(), "ov_1_lb5")).isTrue();
+        }
+    }
+
+    @Test
+    void warehouseUnloadsAWorkpieceOfTheRequestedColour() {
+        try (SimulationEngine engine = startedEngine()) {
+            engine.placeEntity("white", "workpiece", Map.of("color", "white"), "high_bay_warehouse_rack");
+            engine.placeEntity("wp", "workpiece", Map.of("color", "red"), "high_bay_warehouse_rack");
+
+            run(engine, "hbw_1", HighBayWarehouse.UNLOAD, Map.of("color", "red"));
+            assertThat(location(engine.snapshot())).isEqualTo("high_bay_warehouse");
+            run(engine, "vgr_1", Transport.PICK_UP_AND_TRANSPORT, Map.of("start", "high_bay_warehouse", "end", "oven"));
+            assertThat(location(engine.snapshot())).isEqualTo("oven");
+
+            var result = engine.execute("hbw_1", ComponentAction.of(HighBayWarehouse.UNLOAD, Map.of("color", "blue")));
+            assertThat(result.errorMessage()).contains("No Workpiece with color blue available");
         }
     }
 

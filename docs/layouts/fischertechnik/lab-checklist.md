@@ -1,6 +1,6 @@
 # Lab checklist – Fischertechnik Factory 4.0
 
-What is still needed from the lab. Most questions were answered by the factory source, see [http-api.md](http-api.md) and [mqtt.md](mqtt.md). Recording scripts: [tools/lab-recording](../../../tools/lab-recording/README.md).
+What is still needed from the lab. Most questions were answered by the factory source, see [http-api.md](http-api.md) and [mqtt.md](mqtt.md). The recording scripts (`record-mqtt.sh`, `run-process.sh`) are kept outside the repository.
 
 ## Done
 

@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(classes = SimulationApplication.class)
+@SpringBootTest(classes = SimulationApplication.class, properties = "simulation.fischertechnik.mqtt.enabled=false")
 @AutoConfigureMockMvc
 class FischertechnikControllerTest {
 

@@ -53,3 +53,19 @@ Source: `hardware/generic/*_txts.py` in `smart-factory-python`, plus one recorde
 - **WT_1 always reports `ready`.** The controller writes WT's task into the oven's fields, so the oven's `current_task` shows the transport.
 - The compressor sits on MM_1 (`o8_compressor`) and is shared with OV and WT. It turns on in MM_1's message during oven and WT tasks.
 - The VGR's `i4_light_barrier` is read through a counter input. It is still 0/1.
+
+## Simulator
+
+The simulator publishes the same messages for the running Fischertechnik simulation (`FischertechnikMqttPublisher`).
+
+- Broker: `simulation.fischertechnik.mqtt.broker-url`, default `tcp://localhost:1883`; in `docker compose` the bundled Mosquitto. Optional `username` and `password`.
+- Topics `FTFactory/VGR_1`, `OV_1`, `WT_1`, `MM_1`, `SM_1`, every 500 ms (`interval`). HBW_1 is not published.
+- Nothing is published while no Fischertechnik simulation is running, or while several are.
+- Without a reachable broker the simulator keeps running and retries every 5 s.
+
+Differences from the physical factory:
+
+- WT_1 reports its own status, not always `ready`.
+- Axis and position switches, valves and the compressor report fixed idle values; motor speeds are 512 while the machine works.
+- `SM_1.i2_color_sensor` is 1766 without a workpiece at the colour sensor, and 1000 / 1350 / 1560 for a detected white / red / blue workpiece there.
+- `VGR_1.current_pos_*` and `target_pos_*` are 0.

@@ -6,11 +6,13 @@ services:
     build: .
     ports:
       - "8080:8080"
+    environment:
+      SIMULATION_FISCHERTECHNIK_MQTT_BROKER_URL: tcp://mosquitto:1883
     depends_on:
       - mosquitto
 
-  # Broker for the hardware-compatible adapters (MQTT status messages). Not used by the
-  # simulator yet; applications connect to it instead of the lab broker.
+  # Broker for the hardware-compatible adapters: the simulator publishes the factory's status
+  # messages (FTFactory/<STATION>) here; applications connect to it instead of the lab broker.
   mosquitto:
     image: eclipse-mosquitto:2.0.20
     ports:
@@ -22,7 +24,7 @@ services:
     profiles: ["demo"]
     image: python:3.12-alpine
     volumes:
-      - ./tools/demo:/demo:ro
+      - ./applications/demo:/demo:ro
     command: ["python3", "-u", "/demo/demo_process.py", "--url", "http://simulator:8080"]
     depends_on:
       - simulator

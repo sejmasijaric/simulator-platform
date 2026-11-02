@@ -11,3 +11,12 @@ spring:
     # Factory commands block until the simulated machine is done; virtual threads keep that cheap.
     virtual:
       enabled: true
+
+simulation:
+  fischertechnik:
+    mqtt:
+      # Status messages like the physical factory: FTFactory/<STATION>, twice per second.
+      enabled: true
+      broker-url: tcp://localhost:1883
+      topic-prefix: FTFactory/
+      interval: 500ms

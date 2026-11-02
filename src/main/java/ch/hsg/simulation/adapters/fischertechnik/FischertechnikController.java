@@ -6,9 +6,9 @@ import ch.hsg.simulation.execution.ComponentExecutionResult;
 import ch.hsg.simulation.model.ComponentState;
 import ch.hsg.simulation.model.ComponentView;
 import ch.hsg.simulation.model.SimulationSnapshot;
-import ch.hsg.simulation.model.SimulationStatus;
 import ch.hsg.simulation.runtime.SimulationManager;
 import ch.hsg.simulation.systems.fischertechnik.FischertechnikLayoutDefinition;
+import ch.hsg.simulation.systems.fischertechnik.HighBayWarehouse;
 import ch.hsg.simulation.systems.fischertechnik.MillingMachine;
 import ch.hsg.simulation.systems.fischertechnik.Oven;
 import ch.hsg.simulation.systems.fischertechnik.SortingMachine;
@@ -115,6 +115,19 @@ public class FischertechnikController {
                 });
     }
 
+    /**
+     * Brings a stored workpiece of {@code color} to the warehouse pick-up point. Like the physical
+     * process endpoint it takes no {@code machine} parameter. Without such a workpiece the physical
+     * call waits forever; the simulator answers 400.
+     */
+    @GetMapping("/process/unload_from_hbw_container")
+    ResponseEntity<Map<String, Object>> processUnloadFromHbw(HttpServletRequest request, @RequestParam Map<String, String> params) {
+        Map<String, String> withMachine = new LinkedHashMap<>(params);
+        withMachine.put("machine", FischertechnikLayoutDefinition.WAREHOUSE);
+        return command(request, withMachine, "hbw", List.of("color"), HighBayWarehouse.UNLOAD,
+                Map.of("color", params.getOrDefault("color", "")), state -> List.of());
+    }
+
     @GetMapping({"/vgr/status_of_light_barrier", "/ov/status_of_light_barrier", "/mm/status_of_light_barrier", "/sm/status_of_light_barrier"})
     ResponseEntity<Map<String, Object>> statusOfLightBarrier(HttpServletRequest request, @RequestParam Map<String, String> params) {
         String type = typeOf(request);
@@ -193,11 +206,7 @@ public class FischertechnikController {
         if (!"1".equals(parts[1]) || required.stream().anyMatch(name -> params.get(name) == null || params.get(name).isEmpty())) {
             return error(HttpStatus.NOT_FOUND, WRONG_MACHINE);
         }
-        List<UUID> running = manager.getSimulations().stream()
-                .filter(snapshot -> snapshot.definitionId().equals(FischertechnikLayoutDefinition.ID))
-                .filter(snapshot -> snapshot.status() == SimulationStatus.RUNNING)
-                .map(SimulationSnapshot::id)
-                .toList();
+        List<UUID> running = RunningFactory.find(manager);
         if (running.isEmpty()) {
             return error(HttpStatus.SERVICE_UNAVAILABLE, "No running Fischertechnik simulation. Create and start one in the web UI.");
         }

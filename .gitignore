@@ -3,5 +3,9 @@ target/
 *.iml
 .DS_Store
 
-# lab recordings
-tools/lab-recording/*.log
+# local tools: lab recordings, application trials (not part of the platform)
+tools/
+
+# local Claude Code settings
+.claude/
+.mcp.json

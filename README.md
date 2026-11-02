@@ -8,8 +8,9 @@ Simulation of physical lab layouts (Fischertechnik Factory 4.0, Dobot + conveyor
 
 ## Status
 
-- Implemented: generic core, REST control API, web UI, demo layout and demo process.
-- Next: Fischertechnik layout, hardware-compatible adapter.
+- Implemented: generic core, REST control API, web UI, demo layout, Fischertechnik Factory 4.0 layout with its hardware-compatible HTTP API and MQTT status messages ([docs/layouts/fischertechnik](docs/layouts/fischertechnik/http-api.md)).
+- Next: validate the Fischertechnik layout against lab recordings, Dobot + conveyor layout.
+- Example applications per layout: [applications](applications/README.md).
 
 ## Packages (`ch.hsg.simulation`)
 
@@ -22,7 +23,10 @@ Simulation of physical lab layouts (Fischertechnik Factory 4.0, Dobot + conveyor
 | `runtime` | `SimulationManager`, `SimulationEngine`, `SimulationClock`, `EventQueue`, `SimulationContext`, `RealTimeDriver` |
 | `app` | Spring Boot application, wiring, `RealTimeService` |
 | `adapters.rest` | REST control API |
-| `systems.demo` | Demo layout: slots, transporter, conveyor, light barriers |
+| `adapters.fischertechnik` | Hardware-compatible HTTP API and MQTT publisher of the Fischertechnik factory |
+| `systems.common` | Components shared by layouts: slot, light barrier |
+| `systems.demo` | Demo layout: transporter, conveyor |
+| `systems.fischertechnik` | Fischertechnik layout: gripper, oven, transport, milling and sorting machine, warehouse |
 
 The web UI is in `web/` (React, TypeScript, Vite).
 
@@ -41,7 +45,7 @@ java -jar target/simulation-platform-0.1.0-SNAPSHOT.jar
 
 UI and API run on http://localhost:8080. `-Dweb.skip=true` skips the UI build (faster for backend work).
 
-To see the UI driven like by an application, run the demo process: [tools/demo](tools/demo/README.md).
+To see the UI driven like by an application, run an example application: [applications](applications/README.md).
 
 With Docker (no Java needed):
 
@@ -50,7 +54,7 @@ docker compose up --build                  # simulator on :8080, MQTT broker on 
 docker compose --profile demo up --build   # plus the demo process
 ```
 
-The broker is for the hardware-compatible adapters; the simulator does not use it yet.
+The simulator publishes the Fischertechnik factory's status messages (`FTFactory/<STATION>`) to this broker.
 
 UI development with hot reload (backend running on 8080):
 

@@ -3,4 +3,4 @@
 target
 web/node
 web/node_modules
-tools/lab-recording/*.log
+tools/

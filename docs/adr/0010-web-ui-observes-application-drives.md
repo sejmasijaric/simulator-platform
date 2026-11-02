@@ -10,7 +10,7 @@ In use, an application (e.g. a BPMN process in Camunda) sends the machine comman
 - `ComponentAction` and `SimulationEvent` carry an `origin` (`application`, `control`) so the UI shows who caused what.
 - The snapshot contains connections, capacities, fault descriptions and running activities; a definition can provide a `LayoutView` (positions, background image) and `EntityTemplate`s.
 - The UI is a React app in `web/`, built by Maven and served by the Spring Boot app.
-- Without hardware adapter, `tools/demo/demo_process.py` plays the application against the demo layout.
+- Without hardware adapter, `applications/demo/demo_process.py` plays the application against the demo layout.
 
 ## Consequences
 - Manual machine commands remain possible through the REST control API for tests.
