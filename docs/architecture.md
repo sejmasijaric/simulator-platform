@@ -2,6 +2,12 @@
 
 Dashed elements are planned, all others are implemented. Decisions: [ADRs](adr/README.md). Class contracts: [SIMULATION_CLASS_ARCHITECTURE.md](SIMULATION_CLASS_ARCHITECTURE.md).
 
+## Hexagonal view
+
+![Hexagonal architecture](diagrams/hexagonal-architecture.png)
+
+Vector version: [hexagonal-architecture.svg](diagrams/hexagonal-architecture.svg).
+
 ## 1. Building blocks
 
 ```mermaid
