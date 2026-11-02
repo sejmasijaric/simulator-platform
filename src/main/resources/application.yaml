@@ -7,3 +7,7 @@ spring:
   jackson:
     serialization:
       write-durations-as-timestamps: false
+  threads:
+    # Factory commands block until the simulated machine is done; virtual threads keep that cheap.
+    virtual:
+      enabled: true

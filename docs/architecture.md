@@ -59,7 +59,7 @@ flowchart TB
     log -. listeners .-> hw
 
     classDef planned stroke-dasharray: 5 5
-    class hw,ft,dobot planned
+    class dobot planned
 ```
 
 ## 2. Core classes
@@ -190,13 +190,13 @@ classDiagram
 
 ## 3. Timed action
 
-Example: transport with phases at 0 s (busy), 2 s (pick up) and 4 s (drop off, idle). The hardware adapter is planned; in tests, `step()` or `runUntil()` replaces the `RealTimeDriver`.
+Example: transport with phases at 0 s (busy), 2 s (pick up) and 4 s (drop off, idle). In tests, `step()` or `runUntil()` replaces the `RealTimeDriver`.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant App as Application
-    participant HW as Hardware adapter (planned)
+    participant HW as Hardware adapter
     participant Eng as SimulationEngine
     participant Comp as Component
     participant Sim as Simulation

@@ -57,7 +57,7 @@ class SimulationTest {
     @Test
     void validationCatchesDanglingReferences() {
         Simulation broken = new Simulation(UUID.randomUUID(), "broken", "Broken")
-                .addComponent(new ch.hsg.simulation.systems.demo.Slot("A"))
+                .addComponent(new ch.hsg.simulation.systems.common.Slot("A"))
                 .connect("A", "ghost");
         assertThatThrownBy(broken::validate).isInstanceOf(IllegalStateException.class);
     }

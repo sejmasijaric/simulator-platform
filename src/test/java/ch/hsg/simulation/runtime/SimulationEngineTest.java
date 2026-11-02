@@ -8,7 +8,7 @@ import ch.hsg.simulation.execution.ExecutionStatus;
 import ch.hsg.simulation.model.NotFoundException;
 import ch.hsg.simulation.model.SimulationSnapshot;
 import ch.hsg.simulation.model.SimulationStateException;
-import ch.hsg.simulation.systems.demo.LightBarrier;
+import ch.hsg.simulation.systems.common.LightBarrier;
 import ch.hsg.simulation.testlayout.TestLayoutDefinition;
 import ch.hsg.simulation.systems.demo.Transporter;
 import org.junit.jupiter.api.AfterEach;

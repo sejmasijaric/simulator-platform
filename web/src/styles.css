@@ -118,6 +118,23 @@ h2 { font-size: 16px; font-weight: 600; margin: 0; }
 .label { font-size: 13px; fill: var(--text-2); }
 .title { font-size: 14px; font-weight: 600; fill: var(--text); }
 
+/* markers on a photo of the real layout: fixed colours, the photo looks the same in both themes */
+.floor.photo { background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 22px 22px; }
+.floor.photo image { filter: drop-shadow(0 6px 18px rgba(0,0,0,0.25)); }
+.floor.photo .node:hover .shape,
+.floor.photo .node.selected .shape,
+.floor.photo .node.highlight .shape { stroke: #afa9ec; stroke-width: 3; }
+.floor.photo .node.target .shape { stroke: #afa9ec; stroke-dasharray: 4 3; stroke-width: 2.5; fill: rgba(175,169,236,0.45); }
+.photo-label { font-size: 14px; font-weight: 600; fill: #fff; stroke: rgba(0,0,0,0.8); stroke-width: 4px; paint-order: stroke;
+  opacity: 0; transition: opacity 120ms; pointer-events: none; }
+.floor.photo .node:hover .photo-label, .floor.photo .node.selected .photo-label,
+.floor.photo .node.highlight .photo-label, .floor.photo .node.target .photo-label { opacity: 1; }
+.photo-title { font-size: 14px; font-weight: 700; fill: #fff; }
+.photo-meta { font-size: 13px; font-variant-numeric: tabular-nums; fill: rgba(255,255,255,0.8); }
+.working-glow { fill: none; stroke: #afa9ec; stroke-width: 3; animation: glow 1.4s ease-in-out infinite; }
+@keyframes glow { 0%, 100% { stroke-opacity: 0.15; } 50% { stroke-opacity: 0.8; } }
+@media (prefers-reduced-motion: reduce) { .working-glow { animation: none; stroke-opacity: 0.5; } }
+
 /* inspector and story */
 .panel { padding: 16px; border-bottom: 1px solid var(--line); }
 .panel-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }

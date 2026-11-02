@@ -1,58 +1,27 @@
 # Lab checklist – Fischertechnik Factory 4.0
 
-What to collect in the lab to build the Fischertechnik layout. Known commands: [http-api.md](http-api.md). Recording script: [tools/lab-recording](../../../tools/lab-recording/README.md).
+What is still needed from the lab. Most questions were answered by the factory source, see [http-api.md](http-api.md) and [mqtt.md](mqtt.md). Recording scripts: [tools/lab-recording](../../../tools/lab-recording/README.md).
 
-## 1. Files to bring back
+## Done
 
-- [ ] Python source of the factory API server (complete file, plus any modules it imports)
-- [ ] MQTT payload document
-- [ ] MQTT recording of a full production run (`mqtt.log`)
-- [ ] HTTP request/response recordings with durations (`http.log`)
-- [ ] Top-down photo of the factory
+- [x] Python source of the API server and controllers (`smart-factory-python`)
+- [x] MQTT payload per station
+- [x] Valid positions and parameter values
+- [x] Busy behaviour: requests queue, never rejected
+- [x] Light-barrier meaning: raw `0` = interrupted
+- [x] Meaning of `time` (oven: × 2.4 s; mill: seconds)
+- [x] Colour values: `white`, `red`, `blue`, `none`
+- [x] Sorting machine gets the workpiece from the milling machine's belt, pushed by the milling machine
+- [x] Rough durations (2021 production log)
 
-## 2. Setup
+## Still to collect
 
-- [ ] API base URL (expected `http://192.168.0.21:5000`)
-- [ ] MQTT broker host, port, username/password needed?
-- [ ] MQTT topic names (one per machine?)
-- [ ] Laptop has `curl` and `mosquitto_sub` (`brew install mosquitto`)
+- [ ] MQTT recording of one full run of the 6-step process (`record-mqtt.sh`). Needed for the timing of sensor changes.
+- [ ] HTTP recording of the same run with durations (`run-process.sh`)
+- [ ] MQTT broker host, port and login used in the lab now
+- [ ] Photo of the factory from directly above, with all stations in the frame. Used to place stations and positions in the UI's floor view.
 
-## 3. Layout
+## Optional
 
-- [ ] Stations in operation: vacuum gripper, oven, workstation transport, milling machine, sorting machine, others (high-bay warehouse, input/output, environment sensor, camera)?
-- [ ] All workpiece positions, with the name the API uses for each
-- [ ] Which machine moves a workpiece between which positions
-- [ ] Sensors: name in the payload, position it watches, value meaning (light barrier: 0 = interrupted or free?)
-- [ ] Workpiece colours and other attributes (NFC id?)
-- [ ] Initial state: where workpieces are at start
-
-## 4. Per command
-
-Run each command once in the normal case. Record request, response, HTTP status and duration.
-
-| Command | Normal | Busy | No workpiece | Invalid value |
-|---|---|---|---|---|
-| `/vgr/pick_up_and_transport` | [ ] | [ ] | [ ] | [ ] |
-| `/ov/burn` | [ ] | [ ] | [ ] | |
-| `/wt/pick_up_and_transport` | [ ] | [ ] | [ ] | [ ] |
-| `/mm/mill` | [ ] | [ ] | [ ] | [ ] |
-| `/sm/detect_color` | [ ] | | [ ] | |
-| `/sm/sort` | [ ] | [ ] | [ ] | [ ] |
-
-- **Busy:** send the same command again while the first runs (second terminal).
-- **No workpiece:** command with an empty `start` position.
-- **Invalid value:** e.g. `end=foo`.
-
-For each command also note:
-- [ ] Does the call block until the task is done?
-- [ ] Which sensors change during the task, and when?
-- [ ] Meaning of `time` (`/ov/burn`, `/mm/mill`)
-- [ ] Colour values returned by `/sm/detect_color`
-- [ ] Does the sorting machine pick up the workpiece from the milling machine's ejection by itself?
-
-Only the "Normal" column is required. Skip error cases that could damage the factory or leave it in a state you cannot recover.
-
-## 5. Failures
-
-- [ ] Failures that happen in practice (workpiece drops, colour misread, sensor does not trigger, machine hangs)
-- [ ] How each one shows in the HTTP response and MQTT messages
+- [ ] One "no workpiece" run of `/vgr/pick_up_and_transport` to confirm it returns 200
+- [ ] Failures seen in practice (dropped workpiece, colour misread) and how they show in MQTT
