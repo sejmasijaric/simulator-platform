@@ -1,0 +1,187 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1676" height="1928" viewBox="0 0 1676 1928" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+<marker id="ahR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#64748b" stroke-width="1.6"/></marker>
+<marker id="ahE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker>
+</defs>
+<rect width="1676" height="1928" fill="#ffffff"/>
+<text x="40.0" y="54.0" font-size="28" font-weight="bold" fill="#0f172a" text-anchor="start" >Developing an application with the factory simulator</text>
+<text x="40.0" y="82.0" font-size="15" font-weight="normal" fill="#475569" text-anchor="start" >Sequence view · Fischertechnik Factory 4.0 · solid = request, dashed = response, purple = event</text>
+<line x1="120" y1="174" x2="120" y2="1804" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="356" y1="174" x2="356" y2="1804" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="592" y1="174" x2="592" y2="1804" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="828" y1="174" x2="828" y2="1804" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="1064" y1="174" x2="1064" y2="1804" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="1300" y1="174" x2="1300" y2="1804" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="1536" y1="174" x2="1536" y2="1804" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"/>
+<rect x="720.0" y="98" width="688.0" height="84" rx="10" fill="#fffbeb" stroke="#b45309" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="730.0" y="112.0" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="start" letter-spacing="1.5">SIMULATOR  (Spring Boot · :8080)</text>
+<circle cx="120" cy="130" r="8" fill="none" stroke="#0f172a" stroke-width="2"/>
+<path d="M120,138 v14 M108,144 h24 M120,152 l-9,12 M120,152 l9,12" stroke="#0f172a" stroke-width="2" fill="none"/>
+<text x="120.0" y="180.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Developer</text>
+<rect x="258.0" y="120" width="196" height="54" rx="8" fill="#ffffff" stroke="#475569" stroke-width="2"/>
+<text x="356.0" y="143.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >Web UI</text>
+<text x="356.0" y="161.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >browser · :8080</text>
+<rect x="494.0" y="120" width="196" height="54" rx="8" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+<text x="592.0" y="143.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >Application</text>
+<text x="592.0" y="161.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >e.g. lab_process.py</text>
+<rect x="730.0" y="120" width="196" height="54" rx="8" fill="#ffffff" stroke="#0891b2" stroke-width="2"/>
+<text x="828.0" y="143.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >Control API</text>
+<text x="828.0" y="161.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >/simulations/…</text>
+<rect x="966.0" y="120" width="196" height="54" rx="8" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+<text x="1064.0" y="143.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >Factory HTTP adapter</text>
+<text x="1064.0" y="161.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >/vgr /ov /wt /mm /sm</text>
+<rect x="1202.0" y="120" width="196" height="54" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2"/>
+<text x="1300.0" y="143.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >Simulation core</text>
+<text x="1300.0" y="161.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >Manager · Engine · Clock</text>
+<rect x="1438.0" y="120" width="196" height="54" rx="8" fill="#ffffff" stroke="#7c3aed" stroke-width="2"/>
+<text x="1536.0" y="143.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >MQTT broker</text>
+<text x="1536.0" y="161.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >mosquitto · :1883</text>
+<rect x="250.0" y="1034" width="1392.0" height="546" rx="4" fill="#7c3aed" fill-opacity="0.035" stroke="#7c3aed" stroke-width="1.4"/>
+<rect x="494.0" y="1068" width="1140.0" height="404" rx="4" fill="#2563eb" fill-opacity="0.035" stroke="#2563eb" stroke-width="1.4"/>
+<rect x="60.0" y="468" width="1346.0" height="506" rx="4" fill="#0891b2" fill-opacity="0.035" stroke="#0891b2" stroke-width="1.4"/>
+<rect x="24" y="200" width="1628" height="28" rx="6" fill="#f1f5f9"/>
+<text x="38.0" y="219.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="start" >1 · Start the simulator</text>
+<text x="1638.0" y="219.0" font-size="12" font-weight="normal" fill="#64748b" text-anchor="end" font-style="italic">once per working session</text>
+<line x1="125" y1="254" x2="1294" y2="254" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="621.5" y="233" width="177.0" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="710.0" y="246.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >docker compose up --build</text>
+<path d="M1305,276 h26 v16 h-24" fill="none" stroke="#b45309" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="1338.0" y="288.0" font-size="11.5" font-weight="normal" fill="#334155" text-anchor="start" font-style="italic">register layouts (demo, fischertechnik)</text>
+<line x1="125" y1="322" x2="1530" y2="322" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ahR)"/>
+<rect x="719.7" y="301" width="216.6" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="828.0" y="314.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >broker starts alongside (:1883)</text>
+<line x1="125" y1="356" x2="350" y2="356" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="146.2" y="335" width="183.6" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="238.0" y="348.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">open http://localhost:8080</text>
+<line x1="361" y1="390" x2="822" y2="390" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="463.9" y="369" width="256.2" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="592.0" y="382.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">GET /definitions, /simulations (poll)</text>
+<rect x="24" y="420" width="1628" height="28" rx="6" fill="#f1f5f9"/>
+<text x="38.0" y="439.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="start" >2 · Prepare a simulation run</text>
+<text x="1638.0" y="439.0" font-size="12" font-weight="normal" fill="#64748b" text-anchor="end" font-style="italic">simulator only — the real factory has no control API</text>
+<line x1="125" y1="508" x2="586" y2="508" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="158.6" y="487" width="394.8" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="356.0" y="500.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">python3 lab_process.py --url http://localhost:8080 --setup</text>
+<line x1="597" y1="542" x2="822" y2="542" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="651.2" y="521" width="117.6" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="710.0" y="534.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">GET /simulations</text>
+<line x1="597" y1="576" x2="822" y2="576" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="535.7" y="555" width="348.6" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="710.0" y="568.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">POST /simulations/{id}/stop  (each running factory)</text>
+<line x1="597" y1="610" x2="822" y2="610" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="545.6" y="589" width="328.8" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="710.0" y="602.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">POST /simulations {definitionId: fischertechnik}</text>
+<line x1="833" y1="644" x2="1294" y2="644" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="1001.9" y="623" width="124.2" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="1064.0" y="636.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >create simulation</text>
+<line x1="823" y1="678" x2="598" y2="678" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ahR)"/>
+<rect x="677.6" y="657" width="64.8" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="710.0" y="670.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">201 {id}</text>
+<line x1="597" y1="712" x2="822" y2="712" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="548.9" y="691" width="322.2" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="710.0" y="704.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">POST …/start · PUT …/real-time {speedFactor: 1}</text>
+<line x1="597" y1="746" x2="822" y2="746" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="506.0" y="725" width="408.0" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="710.0" y="738.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">POST …/entities {workpiece, color, delivery_pick_up_station}</text>
+<line x1="833" y1="780" x2="1294" y2="780" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="906.2" y="759" width="315.6" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="1064.0" y="772.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >start engine + RealTimeDriver, place workpiece</text>
+<line x1="125" y1="848" x2="350" y2="848" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="67.0" y="827" width="342.0" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="238.0" y="840.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >create + start Fischertechnik run, place workpiece</text>
+<line x1="361" y1="882" x2="822" y2="882" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="454.0" y="861" width="276.0" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="592.0" y="874.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">POST /simulations · …/start · …/entities</text>
+<line x1="833" y1="916" x2="1294" y2="916" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="959.0" y="895" width="210.0" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="1064.0" y="908.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >create, start, place workpiece</text>
+<line x1="125" y1="950" x2="586" y2="950" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="185.0" y="929" width="342.0" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="356.0" y="942.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">python3 lab_process.py --url http://localhost:8080</text>
+<path d="M60.0,468 h45 v14 l-8,8 h-37 z" fill="#0891b2"/>
+<text x="68.0" y="483.0" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="start" letter-spacing="1">ALT</text>
+<text x="115.0" y="484.0" font-size="12" font-weight="bold" fill="#0891b2" text-anchor="start" >[app --setup]</text>
+<line x1="60.0" y1="806" x2="1406.0" y2="806" stroke="#0891b2" stroke-width="1.2" stroke-dasharray="7 5"/>
+<text x="70.0" y="824.0" font-size="12" font-weight="bold" fill="#0891b2" text-anchor="start" >[else: prepare by hand in the UI]</text>
+<rect x="24" y="986" width="1628" height="28" rx="6" fill="#f1f5f9"/>
+<text x="38.0" y="1005.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="start" >3 · The application drives the factory</text>
+<text x="1638.0" y="1005.0" font-size="12" font-weight="normal" fill="#64748b" text-anchor="end" font-style="italic">same calls as against the physical factory (ADR 0009)</text>
+<line x1="597" y1="1108" x2="1058" y2="1108" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="653.7" y="1087" width="348.6" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="828.0" y="1100.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">GET /vgr/status_of_light_barrier?machine=vgr_1&amp;lb=7</text>
+<path d="M1069,1130 h26 v16 h-24" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="1102.0" y="1142.0" font-size="11.5" font-weight="normal" fill="#334155" text-anchor="start" font-style="italic">find the one RUNNING factory  (503 none · 409 several)</text>
+<line x1="1069" y1="1176" x2="1294" y2="1176" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="1133.1" y="1155" width="97.8" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="1182.0" y="1168.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >read snapshot</text>
+<line x1="1059" y1="1210" x2="598" y2="1210" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ahR)"/>
+<rect x="713.1" y="1189" width="229.8" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="828.0" y="1202.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">200 {attributes: [{interrupted}]}</text>
+<line x1="597" y1="1244" x2="1058" y2="1244" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="716.4" y="1223" width="223.2" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="828.0" y="1236.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">GET /ov/burn?machine=ov_1&amp;time=2</text>
+<path d="M1069,1266 h26 v16 h-24" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="1102.0" y="1278.0" font-size="11.5" font-weight="normal" fill="#334155" text-anchor="start" font-style="italic">queue per machine (one command at a time)</text>
+<line x1="1069" y1="1312" x2="1294" y2="1312" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="1024.2" y="1291" width="315.6" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="1182.0" y="1304.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >execute ComponentAction (origin = application)</text>
+<path d="M1305,1334 h26 v16 h-24" fill="none" stroke="#b45309" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="1338.0" y="1346.0" font-size="11.5" font-weight="normal" fill="#334155" text-anchor="start" font-style="italic">timed phases; clock advanced by RealTimeDriver</text>
+<line x1="1305" y1="1380" x2="1530" y2="1380" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ahE)"/>
+<rect x="1260.2" y="1359" width="315.6" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="1418.0" y="1372.0" font-size="11.5" font-weight="normal" fill="#6d28d9" text-anchor="middle" font-family="Menlo, Consolas, monospace">EventLog listener → FTFactory/&lt;STATION&gt; status</text>
+<line x1="1295" y1="1414" x2="1070" y2="1414" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ahR)"/>
+<rect x="1123.2" y="1393" width="117.6" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="1182.0" y="1406.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >action completed</text>
+<line x1="1059" y1="1448" x2="598" y2="1448" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ahR)"/>
+<rect x="650.4" y="1427" width="355.2" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="828.0" y="1440.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">200 {start_time, end_time, process_time, attributes}</text>
+<path d="M494.0,1068 h54 v14 l-8,8 h-46 z" fill="#2563eb"/>
+<text x="502.0" y="1083.0" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="start" letter-spacing="1">LOOP</text>
+<text x="558.0" y="1084.0" font-size="12" font-weight="bold" fill="#2563eb" text-anchor="start" >[each production step  (vgr → ov → wt → mm → sm)]</text>
+<line x1="361" y1="1522" x2="822" y2="1522" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="424.3" y="1501" width="335.4" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="592.0" y="1514.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" font-family="Menlo, Consolas, monospace">GET …/snapshot every 250 ms · GET …/events?from=n</text>
+<line x1="823" y1="1556" x2="362" y2="1556" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ahR)"/>
+<rect x="417.7" y="1535" width="348.6" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="592.0" y="1548.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >floor, running tasks, event story (who caused what)</text>
+<path d="M250.0,1034 h45 v14 l-8,8 h-37 z" fill="#7c3aed"/>
+<text x="258.0" y="1049.0" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="start" letter-spacing="1">PAR</text>
+<text x="305.0" y="1050.0" font-size="12" font-weight="bold" fill="#7c3aed" text-anchor="start" >[the application runs the process]</text>
+<line x1="250.0" y1="1480" x2="1642.0" y2="1480" stroke="#7c3aed" stroke-width="1.2" stroke-dasharray="7 5"/>
+<text x="260.0" y="1498.0" font-size="12" font-weight="bold" fill="#7c3aed" text-anchor="start" >[and: the UI observes; it sends no machine commands (ADR 0010)]</text>
+<rect x="522.0" y="1580" width="612.0" height="26" rx="3" fill="#fef9c3" stroke="#ca8a04" stroke-width="1"/>
+<text x="828.0" y="1597.0" font-size="12" font-weight="normal" fill="#713f12" text-anchor="middle" >on error: 400 rejected command · 504 timeout · 500 run was reset</text>
+<rect x="24" y="1632" width="1628" height="28" rx="6" fill="#f1f5f9"/>
+<text x="38.0" y="1651.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="start" >4 · Inspect, iterate, then switch to the real factory</text>
+<line x1="587" y1="1686" x2="126" y2="1686" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ahR)"/>
+<rect x="254.3" y="1665" width="203.4" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="356.0" y="1678.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >&quot;Done&quot; + step times on stdout</text>
+<line x1="125" y1="1720" x2="350" y2="1720" stroke="#334155" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="40.6" y="1699" width="394.8" height="16" fill="#ffffff" opacity="0.92"/>
+<text x="238.0" y="1712.0" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="middle" >inspect the run; reset, inject faults, change speed, rerun</text>
+<rect x="50.0" y="1738" width="612.0" height="26" rx="3" fill="#fef9c3" stroke="#ca8a04" stroke-width="1"/>
+<text x="356.0" y="1755.0" font-size="12" font-weight="normal" fill="#713f12" text-anchor="middle" >real factory: --url http://192.168.0.21:5000, no --setup, workpiece placed by hand</text>
+<circle cx="120" cy="1814" r="8" fill="none" stroke="#0f172a" stroke-width="2"/>
+<path d="M120,1822 v14 M108,1828 h24 M120,1836 l-9,12 M120,1836 l9,12" stroke="#0f172a" stroke-width="2" fill="none"/>
+<text x="120.0" y="1864.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Developer</text>
+<rect x="258.0" y="1804" width="196" height="54" rx="8" fill="#ffffff" stroke="#475569" stroke-width="2"/>
+<text x="356.0" y="1827.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >Web UI</text>
+<text x="356.0" y="1845.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >browser · :8080</text>
+<rect x="494.0" y="1804" width="196" height="54" rx="8" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+<text x="592.0" y="1827.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >Application</text>
+<text x="592.0" y="1845.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >e.g. lab_process.py</text>
+<rect x="730.0" y="1804" width="196" height="54" rx="8" fill="#ffffff" stroke="#0891b2" stroke-width="2"/>
+<text x="828.0" y="1827.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >Control API</text>
+<text x="828.0" y="1845.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >/simulations/…</text>
+<rect x="966.0" y="1804" width="196" height="54" rx="8" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+<text x="1064.0" y="1827.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >Factory HTTP adapter</text>
+<text x="1064.0" y="1845.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >/vgr /ov /wt /mm /sm</text>
+<rect x="1202.0" y="1804" width="196" height="54" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2"/>
+<text x="1300.0" y="1827.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >Simulation core</text>
+<text x="1300.0" y="1845.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >Manager · Engine · Clock</text>
+<rect x="1438.0" y="1804" width="196" height="54" rx="8" fill="#ffffff" stroke="#7c3aed" stroke-width="2"/>
+<text x="1536.0" y="1827.0" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle" >MQTT broker</text>
+<text x="1536.0" y="1845.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >mosquitto · :1883</text>
+</svg>

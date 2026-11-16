@@ -8,6 +8,12 @@ Dashed elements are planned, all others are implemented. Decisions: [ADRs](adr/R
 
 Vector version: [hexagonal-architecture.svg](diagrams/hexagonal-architecture.svg).
 
+## Developing an application with the simulator
+
+![Application development sequence](diagrams/application-development-sequence.png)
+
+Vector version: [application-development-sequence.svg](diagrams/application-development-sequence.svg). Walkthrough: [applications/README.md](../applications/README.md).
+
 ## 1. Building blocks
 
 ```mermaid
