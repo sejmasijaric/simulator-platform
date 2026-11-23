@@ -2,7 +2,7 @@ package ch.hsg.simulation.systems;
 
 import ch.hsg.simulation.execution.ComponentAction;
 import ch.hsg.simulation.runtime.SimulationEngine;
-import ch.hsg.simulation.systems.demo.Conveyor;
+import ch.hsg.simulation.systems.common.Conveyor;
 import ch.hsg.simulation.systems.demo.DemoLayoutDefinition;
 import ch.hsg.simulation.systems.demo.Transporter;
 import org.junit.jupiter.api.Test;

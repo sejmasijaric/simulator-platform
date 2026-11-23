@@ -64,8 +64,6 @@ flowchart TB
     dobot -- implements --> apiNode
     log -. listeners .-> hw
 
-    classDef planned stroke-dasharray: 5 5
-    class dobot planned
 ```
 
 ## 2. Core classes

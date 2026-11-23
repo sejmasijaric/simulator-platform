@@ -1,4 +1,4 @@
-package ch.hsg.simulation.systems.demo;
+package ch.hsg.simulation.systems.common;
 
 import ch.hsg.simulation.api.Capability;
 import ch.hsg.simulation.api.Component;

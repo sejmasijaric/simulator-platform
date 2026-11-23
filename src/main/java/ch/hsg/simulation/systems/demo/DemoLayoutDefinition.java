@@ -6,6 +6,7 @@ import ch.hsg.simulation.api.LayoutView.Point;
 import ch.hsg.simulation.api.SimulationDefinition;
 import ch.hsg.simulation.model.Entity;
 import ch.hsg.simulation.model.Simulation;
+import ch.hsg.simulation.systems.common.Conveyor;
 import ch.hsg.simulation.systems.common.LightBarrier;
 import ch.hsg.simulation.systems.common.Slot;
 

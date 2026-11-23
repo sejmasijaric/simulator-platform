@@ -8,8 +8,8 @@ Simulation of physical lab layouts (Fischertechnik Factory 4.0, Dobot + conveyor
 
 ## Status
 
-- Implemented: generic core, REST control API, web UI, demo layout, Fischertechnik Factory 4.0 layout with its hardware-compatible HTTP API and MQTT status messages ([docs/layouts/fischertechnik](docs/layouts/fischertechnik/http-api.md)).
-- Next: validate the Fischertechnik layout against lab recordings, Dobot + conveyor layout.
+- Implemented: generic core, REST control API, web UI, demo layout, Fischertechnik Factory 4.0 layout with its hardware-compatible HTTP API and MQTT status messages ([docs/layouts/fischertechnik](docs/layouts/fischertechnik/http-api.md)); Dobot + conveyor layout with the Dobot's hardware-compatible HTTP API ([docs/layouts/dobot](docs/layouts/dobot/http-api.md)), conveyor still a placeholder.
+- Next: validate both layouts against lab recordings; model the conveyor once its control is known ([Dobot lab checklist](docs/layouts/dobot/lab-checklist.md)).
 - Example applications per layout: [applications](applications/README.md).
 
 ## Packages (`ch.hsg.simulation`)
@@ -24,9 +24,11 @@ Simulation of physical lab layouts (Fischertechnik Factory 4.0, Dobot + conveyor
 | `app` | Spring Boot application, wiring, `RealTimeService` |
 | `adapters.rest` | REST control API |
 | `adapters.fischertechnik` | Hardware-compatible HTTP API and MQTT publisher of the Fischertechnik factory |
-| `systems.common` | Components shared by layouts: slot, light barrier |
-| `systems.demo` | Demo layout: transporter, conveyor |
+| `adapters.dobot` | Hardware-compatible HTTP API of the Dobot |
+| `systems.common` | Components shared by layouts: slot, rack, conveyor, light barrier |
+| `systems.demo` | Demo layout: transporter |
 | `systems.fischertechnik` | Fischertechnik layout: gripper, oven, transport, milling and sorting machine, warehouse |
+| `systems.dobot` | Dobot + conveyor layout: Dobot arm, poses, playback files |
 
 The web UI is in `web/` (React, TypeScript, Vite).
 

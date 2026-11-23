@@ -3,6 +3,7 @@ package ch.hsg.simulation.app;
 import ch.hsg.simulation.api.SimulationDefinition;
 import ch.hsg.simulation.runtime.SimulationManager;
 import ch.hsg.simulation.systems.demo.DemoLayoutDefinition;
+import ch.hsg.simulation.systems.dobot.DobotLayoutDefinition;
 import ch.hsg.simulation.systems.fischertechnik.FischertechnikLayoutDefinition;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -28,5 +29,11 @@ public class SimulationConfiguration {
     @ConditionalOnProperty(name = "simulation.layouts.fischertechnik.enabled", havingValue = "true", matchIfMissing = true)
     public SimulationDefinition fischertechnikLayout() {
         return new FischertechnikLayoutDefinition();
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "simulation.layouts.dobot.enabled", havingValue = "true", matchIfMissing = true)
+    public SimulationDefinition dobotLayout() {
+        return new DobotLayoutDefinition();
     }
 }

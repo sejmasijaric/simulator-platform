@@ -1,11 +1,11 @@
-package ch.hsg.simulation.systems.fischertechnik;
+package ch.hsg.simulation.systems.common;
 
 import ch.hsg.simulation.api.Capability;
 import ch.hsg.simulation.api.Component;
 
 import java.util.Set;
 
-/** Passive storage that holds several workpieces, e.g. the high-bay warehouse rack. */
+/** Passive storage that holds several entities, e.g. the high-bay warehouse rack or a table. */
 public record Rack(String getId, int getCapacity) implements Component {
 
     @Override
