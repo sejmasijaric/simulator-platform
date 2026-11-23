@@ -14,6 +14,7 @@ import ch.hsg.simulation.core.port.SimulationStatus;
 import ch.hsg.simulation.core.port.Snapshot;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -130,8 +131,8 @@ public final class SimulationManager implements SimulationControl, AutoCloseable
     // ---- the layout's own interface ----
 
     @Override
-    public CommandHandle command(UUID id, String commandPlace, Map<String, ?> parameters, String returnsAfter,
-                                 String origin) {
+    public CommandHandle command(UUID id, String commandPlace, Map<String, ?> parameters,
+                                 Collection<String> returnsAfter, String origin) {
         return engine(id).command(commandPlace, parameters, returnsAfter, origin);
     }
 

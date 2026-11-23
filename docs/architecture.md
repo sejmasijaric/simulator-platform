@@ -1,69 +1,54 @@
 # Architecture
 
-Dashed elements are planned, all others are implemented. Decisions: [ADRs](adr/README.md). Class contracts: [SIMULATION_CLASS_ARCHITECTURE.md](SIMULATION_CLASS_ARCHITECTURE.md).
+Decisions: [ADRs](adr/README.md). Layout format: [layouts/layout-format.md](layouts/layout-format.md).
 
 ## Hexagonal view
 
 ![Hexagonal architecture](diagrams/hexagonal-architecture.png)
 
-Vector version: [hexagonal-architecture.svg](diagrams/hexagonal-architecture.svg).
-
-## Developing an application with the simulator
-
-![Application development sequence](diagrams/application-development-sequence.png)
-
-Vector version: [application-development-sequence.svg](diagrams/application-development-sequence.svg). Walkthrough: [applications/README.md](../applications/README.md).
+Vector version: [hexagonal-architecture.svg](diagrams/hexagonal-architecture.svg). Classes: [class-diagram.svg](diagrams/class-diagram.svg).
 
 ## 1. Building blocks
 
 ```mermaid
 flowchart TB
-    subgraph external["External"]
+    subgraph external["Outside"]
         ui["Web UI"]
-        app["Application"]
+        app["Application<br/>(e.g. Camunda process)"]
+        broker[("MQTT broker")]
+        files[("layouts/*.yaml")]
     end
 
     subgraph adapters["Adapters"]
-        rest["REST control API"]
-        hw["Hardware-compatible adapter<br/>(per layout)"]
-        driver["RealTimeDriver"]
+        rest["ControlController<br/>REST control API"]
+        http["LayoutHttpFilter + LayoutHttpApi<br/>layout's own HTTP API"]
+        loader["YamlLayoutLoader"]
+        mqtt["MqttEventPublisher"]
+    end
+
+    subgraph ports["Ports (core.port)"]
+        control["SimulationControl"]
+        source["LayoutSource"]
+        listener["SimulationListener"]
     end
 
     subgraph core["Core"]
         manager["SimulationManager"]
-        engine["SimulationEngine"]
-        clock["SimulationClock"]
-        queue["EventQueue"]
-        log["EventLog"]
-        sim["Simulation"]
-        apiNode["api: SimulationDefinition,<br/>Component, Capability, FaultMode"]
+        engine["SimulationEngine<br/>marking · time · faults · log"]
+        interpreter["NetInterpreter"]
+        net["NetDefinition"]
     end
 
-    subgraph layouts["Layouts"]
-        test["Demo layout"]
-        ft["Fischertechnik Factory 4.0"]
-        dobot["Dobot + conveyor"]
-    end
-
-    physical[("Physical layout")]
-
-    ui --> rest
-    app --> hw
-    app -. "same interface" .-> physical
-    rest --> manager
-    hw --> manager
-    driver --> engine
-    manager --> engine
-    engine --> clock
-    engine --> queue
-    engine --> log
-    engine --> sim
-    sim --> apiNode
-    test -- implements --> apiNode
-    ft -- implements --> apiNode
-    dobot -- implements --> apiNode
-    log -. listeners .-> hw
-
+    ui --> rest --> control
+    app --> http --> control
+    control -. implemented by .-> manager
+    manager --> engine --> interpreter --> net
+    manager --> source
+    loader -. implements .-> source
+    loader --> files
+    mqtt --> control
+    mqtt --> broker
+    engine -. events .-> listener
 ```
 
 ## 2. Core classes
@@ -71,179 +56,108 @@ flowchart TB
 ```mermaid
 classDiagram
     direction LR
-
-    class SimulationManager {
-        +create(definitionId) UUID
-        +start(id)
-        +stop(id)
-        +reset(id)
-        +remove(id)
-        +execute(id, componentId, action) ComponentExecutionResult
-        +setFault(id, componentId, faultId, active)
-        +getSimulation(id) SimulationSnapshot
-        +engine(id) SimulationEngine
+    class SimulationControl {
+        <<interface>>
+        +create(layoutId) UUID
+        +start(id) / stop(id) / reset(id)
+        +command(id, place, parameters, returnsAfter, origin) CommandHandle
+        +readSensors(id) Map
+        +placeToken(id, place, tokenId, attributes)
+        +setSensorFault(id, sensor, fault)
+        +setNetFault(id, transition, fault)
+        +setActiveModules(id, modules)
+        +step(id) / runUntil(id, time) / setSpeed(id, factor)
+        +snapshot(id) Snapshot
+        +events(id, from)
     }
+    class SimulationManager
     class SimulationEngine {
-        +execute(componentId, action) ComponentExecutionResult
-        +completionOf(commandId) CompletableFuture
-        +step() boolean
-        +runUntil(time)
-        +runUntilIdle()
-        +setFault(componentId, faultId, active)
-        +snapshot() SimulationSnapshot
-        +events() List~SimulationEvent~
-        +addListener(listener)
+        -now Duration
+        -marking Marking
+        -queue EventQueue
+        -faults Faults
+        -log EventLog
     }
-    class SimulationClock {
-        +now() Duration
-        +advanceTo(time)
+    class NetInterpreter {
+        +next(marking, faults, modules) Firing
     }
-    class EventQueue {
-        +schedule(now, time, ...) ScheduledEntry
-        +poll() ScheduledEntry
+    class NetDefinition {
+        <<record>>
+        places · transitions · sensors
+        http · events · image · tokenTemplates
     }
-    class EventLog {
-        +append(event)
-        +events() List~SimulationEvent~
+    class Marking {
+        +tokensAt(place)
+        +add(place, token) / remove(tokenId)
     }
-    class RealTimeDriver {
-        +start()
-        +close()
+    class Token {
+        <<record>>
+        id · attributes · commandId
     }
-    class Simulation {
-        +addComponent(component)
-        +addEntity(entity)
-        +connect(from, to)
-        +validate()
-        +apply(changes) List~SimulationEvent~
-        +stateOf(componentId) ComponentState
-        +entitiesAt(componentId) List~EntityView~
-    }
-    class SimulationDefinition {
-        <<interface>>
-        +getId()
-        +create(simulationId) Simulation
-    }
-    class Component {
-        <<interface>>
-        +getCapabilities() Set~Capability~
-        +getFaultModes() Set~FaultMode~
-        +getCapacity() int
-        +initialState() ComponentState
-        +execute(action, context) ComponentExecutionResult
-        +observe(context) Optional~ComponentState~
-    }
-    class SimulationContext {
-        <<interface>>
-        +now()
-        +entitiesAt(componentId)
-        +stateOf(componentId)
-        +isBusy(componentId)
-        +isFaultActive(componentId, faultId)
-    }
-    class ComponentExecutionResult {
-        +status: ExecutionStatus
-        +phases: List~ScheduledChange~
-        +duration() Duration
-    }
-    class ScheduledChange {
-        +offset: Duration
-        +changes: List~StateChange~
-        +events: List~SimulationEvent~
-    }
-    class StateChange {
-        <<sealed>>
-        CreateEntity
-        RemoveEntity
-        MoveEntity
-        UpdateEntityAttributes
-        UpdateComponentState
-    }
-    class Entity {
-        +id
-        +type
-        +attributes
-        +locationComponentId
-    }
-    class Capability {
-        +name
-        +parameters
-    }
-    class FaultMode {
-        +id
-        +description
-    }
+    class Faults
+    class RealTimeDriver
 
-    SimulationManager ..> SimulationDefinition : uses
+    SimulationManager ..|> SimulationControl
     SimulationManager *-- "0..*" SimulationEngine
-    SimulationEngine *-- "1" Simulation
-    SimulationEngine *-- SimulationClock
-    SimulationEngine *-- EventQueue
-    SimulationEngine *-- EventLog
-    SimulationEngine ..> SimulationContext : provides
+    SimulationManager *-- "0..*" RealTimeDriver
     RealTimeDriver --> SimulationEngine : advances
-    SimulationDefinition ..> Simulation : creates
-    Simulation *-- "1..*" Component
-    Simulation *-- "0..*" Entity
-    Component --> "0..*" Capability
-    Component --> "0..*" FaultMode
-    Component ..> ComponentExecutionResult : returns
-    ComponentExecutionResult *-- "0..*" ScheduledChange
-    ScheduledChange --> "0..*" StateChange
+    SimulationEngine *-- Marking
+    SimulationEngine *-- Faults
+    SimulationEngine *-- NetInterpreter
+    NetInterpreter --> NetDefinition
+    Marking o-- "0..*" Token
 ```
 
-## 3. Timed action
+## 3. A command through the layout's own interface
 
-Example: transport with phases at 0 s (busy), 2 s (pick up) and 4 s (drop off, idle). In tests, `step()` or `runUntil()` replaces the `RealTimeDriver`.
+Example: `GET /ov/burn?machine=ov_1` with the burn taking 5 s + 2 × 2.4 s.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant App as Application
-    participant HW as Hardware adapter
+    participant Api as LayoutHttpApi
+    participant Ctl as SimulationControl
     participant Eng as SimulationEngine
-    participant Comp as Component
-    participant Sim as Simulation
+    participant Net as NetInterpreter
     participant Drv as RealTimeDriver
 
-    App->>HW: command
-    HW->>Eng: execute(componentId, action)
-    Eng->>Eng: validate status, component, capability, parameters
-    Eng->>Comp: execute(action, context)
-    Comp-->>Eng: ACCEPTED, phases at 0 s, 2 s, 4 s
-    Eng->>Eng: schedule phases, log ACTION_ACCEPTED
-    Eng->>Sim: apply(phase 0 s)
-    Eng-->>HW: result
-    HW->>Eng: completionOf(commandId)
-
-    loop every tick
+    App->>Api: GET /ov/burn?machine=ov_1
+    Api->>Api: check parameters (machine, time default 2)
+    Api->>Ctl: command(sim, cmd_ov_burn, {machine, time}, [ov_burn, ov_burn_empty])
+    Ctl->>Eng: request token into cmd_ov_burn
+    Eng->>Net: next firing?
+    Net-->>Eng: ov_drive_in (takes request, ov_idle, workpiece)
+    Eng-->>Api: CommandHandle
+    loop every 20 ms
         Drv->>Eng: runUntil(t)
-        Eng->>Sim: apply(due phases)
-        Eng->>Comp: observe(context) on all components
-        Eng->>Eng: log changes
+        Eng->>Net: next firing?
     end
-
-    Eng-->>HW: ACTION_COMPLETED at 4 s
-    HW-->>App: response
+    Note over Eng: 5 s: ov_drive_in ends, ov_burn starts<br/>14.8 s: ov_burn ends, workpiece back on oven, ov_idle back
+    Eng-->>Api: COMMAND_COMPLETED (command id)
+    Api-->>App: 200 {"attributes": [], "process_time": ..., ...}
 ```
 
-## 4. Fault
+A second burn sent meanwhile waits as a token in `cmd_ov_burn` until `ov_idle` has its token back, like the factory's queue.
+
+## 4. A fault
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Tester
-    participant Eng as SimulationEngine
-    participant Comp as Transporter
+    participant UI as Web UI
+    participant Ctl as SimulationControl
     participant App as Application
+    participant Api as LayoutHttpApi
 
-    Tester->>Eng: setFault("T", "ITEM_NOT_MOVED", true)
-    Eng->>Eng: log FAULT_ACTIVATED
-    App->>Eng: execute("T", transport IN to OUT)
-    Eng->>Comp: execute(action, context)
-    Comp-->>Eng: same phases, without moves
-    Eng-->>App: action completes after 4 s
-    App->>Eng: read status: item still at IN
+    UI->>Ctl: setNetFault(sim, ov_drive_in, BLOCKED)
+    App->>Api: GET /ov/burn?machine=ov_1
+    Note over Api: the request waits in cmd_ov_burn
+    UI->>Ctl: setSensorFault(sim, ov_lb5, WRONG_VALUE)
+    App->>Api: GET /ov/status_of_light_barrier?machine=ov_1&lb=5
+    Api-->>App: interrupted: false (workpiece is there)
+    UI->>Ctl: setNetFault(sim, ov_drive_in, null)
+    Note over Api: the burn starts, the call returns 14.8 s later
 ```
 
 ## 5. Lifecycle
@@ -261,4 +175,4 @@ stateDiagram-v2
     STOPPED --> [*] : remove
 ```
 
-Only `RUNNING` accepts commands and advances time. `stop` keeps scheduled phases. `reset` rebuilds the simulation from its definition with the same id.
+Only `RUNNING` accepts commands and moves time. `stop` keeps firings in progress. `reset` returns to the initial marking at time zero, same id, no faults, empty trace.

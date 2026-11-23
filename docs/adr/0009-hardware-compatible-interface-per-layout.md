@@ -1,6 +1,6 @@
 # ADR 0009: Hardware-compatible adapter per layout
 
-Status: Proposed (2026-10-28)
+Status: Superseded by [0015](0015-generic-layout-interface-adapter.md) (2026-11-23); proposed 2026-10-28
 
 ## Context
 An application must run unchanged against simulator and physical layout. The physical interface differs per layout and has no simulation ids.

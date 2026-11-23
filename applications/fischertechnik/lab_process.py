@@ -56,14 +56,13 @@ def light_barrier(base, machine, number):
 def setup_simulator(base, color):
     _, simulations = call("GET", f"{base}/simulations")
     for simulation in simulations or []:
-        if simulation["definitionId"] == "fischertechnik" and simulation["status"] == "RUNNING":
+        if simulation["layoutId"] == "fischertechnik" and simulation["status"] == "RUNNING":
             call("POST", f"{base}/simulations/{simulation['id']}/stop")
-    _, created = call("POST", f"{base}/simulations", {"definitionId": "fischertechnik"})
+    _, created = call("POST", f"{base}/simulations", {"layoutId": "fischertechnik"})
     simulation = f"{base}/simulations/{created['id']}"
     call("POST", f"{simulation}/start")
-    call("PUT", f"{simulation}/real-time", {"speedFactor": 1})
-    call("POST", f"{simulation}/entities",
-         {"type": "workpiece", "attributes": {"color": color}, "componentId": "delivery_pick_up_station"})
+    call("PUT", f"{simulation}/speed", {"factor": 1})
+    call("POST", f"{simulation}/tokens", {"place": "delivery_pick_up_station", "attributes": {"color": color}})
     print(f"Simulator ready: {created['id']}, {color} workpiece on the delivery station")
 
 

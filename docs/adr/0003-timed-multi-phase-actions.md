@@ -1,6 +1,6 @@
 # ADR 0003: Actions consist of timed phases
 
-Status: Accepted (2026-10-28)
+Status: Superseded by [0011](0011-layouts-as-timed-coloured-petri-nets.md): phases became timed transitions (2026-11-23); accepted 2026-10-28
 
 ## Context
 A physical task changes the world in steps. Example: a gripper first moves an item to its hold position, later to the target. The intermediate state is observable.

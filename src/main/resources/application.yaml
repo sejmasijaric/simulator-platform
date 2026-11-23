@@ -8,15 +8,18 @@ spring:
     serialization:
       write-durations-as-timestamps: false
   threads:
-    # Factory commands block until the simulated machine is done; virtual threads keep that cheap.
+    # Layout commands block until the simulated machine is done; virtual threads keep that cheap.
     virtual:
       enabled: true
 
 simulation:
-  fischertechnik:
+  layouts:
+    # Layouts are bundled in src/main/resources/layouts/. Set a folder here to add more without rebuilding.
+    dir: ""
+  events:
     mqtt:
-      # Status messages like the physical factory: FTFactory/<STATION>, twice per second.
+      # Publishes the MQTT messages each layout declares (e.g. FTFactory/<STATION> twice per second).
       enabled: true
       broker-url: tcp://localhost:1883
-      topic-prefix: FTFactory/
-      interval: 500ms
+      username: ""
+      password: ""

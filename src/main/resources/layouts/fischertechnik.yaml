@@ -1,0 +1,540 @@
+# Fischertechnik Factory 4.0 as a timed, coloured Petri net.
+#
+# Sources: docs/layouts/fischertechnik/http-api.md and mqtt.md (from the lab's app.py and
+# controllers). Durations are starting values from the 2021 production log until the lab
+# recordings are in. Format: docs/layouts/layout-format.md.
+#
+# Patterns used throughout:
+# - <machine>_idle holds one token while the machine is ready (current_state: ready).
+# - cmd_<machine>_<task> is the controller's queue: each HTTP call puts a request token there.
+#   A request waits until the machine is ready, like the physical queue (no "busy" error).
+# - A task that takes several steps passes the request on as a job token (<machine>_job), so
+#   later steps still see the request's parameters (${end}, ${time}).
+# - The physical controllers never check for a workpiece: a task without one still runs and
+#   succeeds. The *_empty transitions model that with an inhibitor arc.
+
+id: fischertechnik
+name: Fischertechnik Factory 4.0
+description: >-
+  Gripper, oven, transport, milling machine, sorting line and warehouse of the lab factory.
+  Applications use the factory's own HTTP API (/vgr/..., /ov/..., ...) and MQTT topics
+  (FTFactory/<STATION>) on this server.
+
+# ---- shared values, referenced with *name below ----
+
+x-positions:
+  vgr-starts: &vgr_starts [delivery_pick_up_station, color_detection_delivery_pick_up_station,
+                           nfc_reader_delivery_pick_up_station, oven, sink_1, sink_2, sink_3, sm_cb,
+                           high_bay_warehouse, waiting_platform]
+  vgr-ends: &vgr_ends [delivery_pick_up_station, color_detection_delivery_pick_up_station,
+                       nfc_reader_delivery_pick_up_station, oven, sink_1, sink_2, sink_3, sm_cb,
+                       high_bay_warehouse, waiting_platform, high_bay_warehouse_delivery_station]
+
+x-errors:
+  no-machine: &no_machine
+    status: 404
+    body: '{"error": "404 Not Found: No Machine is passed"}'
+  wrong-machine: &wrong_machine
+    status: 404
+    body: '{"error": "404 Not Found: Please make sure that the value of the parameter for the machine is 1"}'
+  unknown-position: &unknown_position
+    status: 400
+    body: '{"error": "400 Bad Request: The machine controller of the addressed machine encountered an error: <class ''ValueError''>:Position ${value} does not exist"}'
+  no-light-barrier: &no_light_barrier
+    status: 400
+    body: '{"error": "400 Bad Request: The machine controller of the addressed machine encountered an error: <class ''ValueError''>:Light Barrier ${value} does not exist"}'
+  not-an-integer: &not_an_integer
+    status: 500
+    body: '{"error": "invalid literal for int() with base 10: ''${value}''"}'
+  sort-start: &sort_start
+    status: 400
+    body: '{"error": "400 Bad Request: The machine controller of the addressed machine encountered an error: <class ''ValueError''>:Start ${value} is not simulated (only initial)"}'
+  sort-location: &sort_location
+    status: 400
+    body: '{"error": "400 Bad Request: The machine controller of the addressed machine encountered an error: <class ''ValueError''>:Sink ${value} is not a valid ejection position"}'
+  unknown-color: &unknown_color
+    status: 400
+    body: '{"error": "400 Bad Request: Color ${value} does not exist (white, red, blue)"}'
+
+# ---- picture and workpieces for the web UI ----
+
+image:
+  url: /layouts/fischertechnik.png
+  width: 1428
+  height: 1000
+  positions:
+    vgr_idle: [870, 700]
+    vgr_holding: [905, 700]
+    ov_idle: [900, 235]
+    wt_idle: [1000, 405]
+    wt_holding: [1000, 440]
+    mm_idle: [1190, 95]
+    mm_milled: [1150, 140]
+    sm_idle: [1350, 385]
+    hbw_idle: [430, 300]
+    high_bay_warehouse_rack: [430, 420]
+    high_bay_warehouse: [640, 760]
+    delivery_pick_up_station: [870, 940]
+    color_detection_delivery_pick_up_station: [930, 960]
+    high_bay_warehouse_delivery_station: [995, 930]
+    oven: [865, 318]
+    oven_chamber: [930, 305]
+    milling_machine: [1130, 250]
+    milling_machine_belt: [1268, 345]
+    sorting_machine_start: [1262, 445]
+    color_sensor: [1290, 565]
+    sink_1: [1180, 715]
+    sink_2: [1180, 800]
+    sink_3: [1180, 880]
+    vgr_lb7: [830, 940]
+    vgr_lb4: [1035, 930]
+    ov_lb5: [822, 318]
+    mm_lb4: [1300, 345]
+    sm_lb1: [1228, 445]
+    sm_lb3: [1290, 655]
+    sm_lb6: [1140, 715]
+    sm_lb7: [1140, 800]
+    sm_lb8: [1140, 880]
+
+tokens:
+  White workpiece: {color: white}
+  Red workpiece: {color: red}
+  Blue workpiece: {color: blue}
+
+# ---- the net ----
+
+places:
+  # positions of workpieces
+  delivery_pick_up_station: {capacity: 1, module: vgr}
+  color_detection_delivery_pick_up_station: {capacity: 1, module: vgr}
+  nfc_reader_delivery_pick_up_station: {capacity: 1, module: vgr}
+  waiting_platform: {capacity: 1, module: vgr}
+  sm_cb: {capacity: 1, module: vgr}
+  high_bay_warehouse_delivery_station: {capacity: 1, module: vgr}
+  vgr_holding: {capacity: 1, module: vgr}
+  oven: {capacity: 1, module: ov}
+  oven_chamber: {capacity: 1, module: ov}
+  wt_holding: {capacity: 1, module: wt}
+  milling_machine: {capacity: 1, module: mm}
+  mm_milled: {capacity: 1, module: mm}
+  milling_machine_belt: {capacity: 1, module: mm}
+  sorting_machine_start: {capacity: 1, module: sm}
+  color_sensor: {capacity: 1, module: sm}
+  sink_1: {capacity: 1, module: sm}
+  sink_2: {capacity: 1, module: sm}
+  sink_3: {capacity: 1, module: sm}
+  high_bay_warehouse_rack: {capacity: 9, module: hbw}
+  high_bay_warehouse: {capacity: 1, module: hbw}
+  # machines: one token while ready
+  vgr_idle: {capacity: 1, initial: 1, module: vgr}
+  ov_idle: {capacity: 1, initial: 1, module: ov}
+  wt_idle: {capacity: 1, initial: 1, module: wt}
+  mm_idle: {capacity: 1, initial: 1, module: mm}
+  sm_idle: {capacity: 1, initial: 1, module: sm}
+  hbw_idle: {capacity: 1, initial: 1, module: hbw}
+  # request queues
+  cmd_vgr_transport: {module: vgr}
+  cmd_ov_burn: {module: ov}
+  cmd_wt_transport: {module: wt}
+  cmd_mm_mill: {module: mm}
+  cmd_sm_detect: {module: sm}
+  cmd_sm_sort: {module: sm}
+  cmd_hbw_unload: {module: hbw}
+  # requests in progress
+  vgr_job: {capacity: 1, module: vgr}
+  ov_job: {capacity: 1, module: ov}
+  wt_job: {capacity: 1, module: wt}
+  mm_job: {capacity: 1, module: mm}
+  mm_belt_job: {capacity: 1, module: mm}
+  mm_return_job: {capacity: 1, module: mm}
+
+transitions:
+  # Vacuum gripper (VGR): picks the workpiece at ${start} after 20 s, sets it down at ${end} 25 s later.
+  vgr_pick_up:
+    in: [{cmd_vgr_transport: job}, vgr_idle, {"${start}": wp}]
+    out: [{vgr_holding: wp}, {vgr_job: job}]
+    duration: 20s
+    module: vgr
+  vgr_drop:
+    in: [{vgr_job: job}, {vgr_holding: wp}]
+    out: [{"${end}": wp}, vgr_idle]
+    duration: 25s
+    module: vgr
+  vgr_move_empty:
+    in: [{cmd_vgr_transport: job}, vgr_idle]
+    inhibit: ["${start}"]
+    out: [vgr_idle]
+    duration: 45s
+    module: vgr
+
+  # Oven (OV): drives the platform in, burns time x 2.4 s, drives it back out (5 s each way).
+  # The light barrier at the platform is free from the first moment until the platform is back.
+  ov_drive_in:
+    in: [{cmd_ov_burn: job}, ov_idle, {oven: wp}]
+    out: [{oven_chamber: wp}, {ov_job: job}]
+    duration: 5s
+    module: ov
+  ov_burn:
+    in: [{ov_job: job}, {oven_chamber: wp}]
+    out: [{oven: wp}, ov_idle]
+    duration: 5s
+    per-unit: {parameter: time, duration: 2.4s}
+    module: ov
+  ov_burn_empty:
+    in: [{cmd_ov_burn: job}, ov_idle]
+    inhibit: [oven]
+    out: [ov_idle]
+    duration: 10s
+    per-unit: {parameter: time, duration: 2.4s}
+    module: ov
+
+  # Workstation transport (WT) between oven and milling machine.
+  wt_pick_up:
+    in: [{cmd_wt_transport: job}, wt_idle, {"${start}": wp}]
+    out: [{wt_holding: wp}, {wt_job: job}]
+    duration: 20s
+    module: wt
+  wt_drop:
+    in: [{wt_job: job}, {wt_holding: wp}]
+    out: [{"${end}": wp}, wt_idle]
+    duration: 24s
+    module: wt
+  wt_move_empty:
+    in: [{cmd_wt_transport: job}, wt_idle]
+    inhibit: ["${start}"]
+    out: [wt_idle]
+    duration: 44s
+    module: wt
+
+  # Milling machine (MM): turns to the mill (8 s) and mills ${time} s; with end=ejection it turns
+  # on (8 s) and its belt carries the workpiece to the sorting machine (6 s), then it turns back
+  # (8 s). Any other end turns straight back. An invalid start does nothing, as on the machine.
+  mm_mill:
+    in: [{cmd_mm_mill: job}, mm_idle, {milling_machine: wp}]
+    when: {start: initial}
+    out: [{mm_milled: wp}, {mm_job: job}]
+    duration: 8s
+    per-unit: {parameter: time, duration: 1s}
+    module: mm
+  mm_eject:
+    in: [{mm_job: job}, {mm_milled: wp}]
+    when: {job.end: ejection}
+    out: [{milling_machine_belt: wp}, {mm_belt_job: job}]
+    duration: 8s
+    module: mm
+  mm_belt:
+    in: [{mm_belt_job: job}, {milling_machine_belt: wp}]
+    out: [{sorting_machine_start: wp}, {mm_return_job: job}]
+    duration: 6s
+    module: mm
+  mm_turn_back:
+    in: [{mm_return_job: job}]
+    out: [mm_idle]
+    duration: 8s
+    module: mm
+  mm_return:
+    in: [{mm_job: job}, {mm_milled: wp}]
+    when: {job.end: "!ejection"}
+    out: [{milling_machine: wp}, mm_idle]
+    duration: 8s
+    module: mm
+  mm_mill_empty:
+    in: [{cmd_mm_mill: job}, mm_idle]
+    when: {start: initial}
+    inhibit: [milling_machine]
+    out: [mm_idle]
+    duration: 16s
+    per-unit: {parameter: time, duration: 1s}
+    module: mm
+  mm_invalid:
+    in: [{cmd_mm_mill: job}, mm_idle]
+    when: {start: "!initial"}
+    out: [mm_idle]
+    module: mm
+
+  # Sorting machine (SM): detect_color runs the belt to the colour sensor (5 s). A workpiece
+  # already at the sensor reads as none, as on the machine.
+  sm_detect:
+    in: [{cmd_sm_detect: job}, sm_idle, {sorting_machine_start: wp}]
+    out: [{color_sensor: wp}, sm_idle]
+    duration: 5s
+    result: {color: "${wp.color}"}
+    module: sm
+  sm_detect_at_sensor:
+    in: [{cmd_sm_detect: job}, sm_idle, {color_sensor: wp}]
+    inhibit: [sorting_machine_start]
+    out: [{color_sensor: wp}, sm_idle]
+    duration: 0.5s
+    result: {color: none}
+    module: sm
+  sm_detect_nothing:
+    in: [{cmd_sm_detect: job}, sm_idle]
+    inhibit: [sorting_machine_start, color_sensor]
+    out: [sm_idle]
+    duration: 5s
+    result: {color: none}
+    module: sm
+
+  # sort detects (5 s) and ejects (5 s): into the predefined sink, or with location none by
+  # colour (white 1, red 2, blue 3), answering with the sink number.
+  sm_sort_white:
+    in: [{cmd_sm_sort: job}, sm_idle, {sorting_machine_start: wp}]
+    when: {predefined_ejection_location: none, wp.color: white}
+    out: [{sink_1: wp}, sm_idle]
+    duration: 10s
+    result: {sink: "1"}
+    module: sm
+  sm_sort_red:
+    in: [{cmd_sm_sort: job}, sm_idle, {sorting_machine_start: wp}]
+    when: {predefined_ejection_location: none, wp.color: red}
+    out: [{sink_2: wp}, sm_idle]
+    duration: 10s
+    result: {sink: "2"}
+    module: sm
+  sm_sort_blue:
+    in: [{cmd_sm_sort: job}, sm_idle, {sorting_machine_start: wp}]
+    when: {predefined_ejection_location: none, wp.color: blue}
+    out: [{sink_3: wp}, sm_idle]
+    duration: 10s
+    result: {sink: "3"}
+    module: sm
+  sm_sort_predefined:
+    in: [{cmd_sm_sort: job}, sm_idle, {sorting_machine_start: wp}]
+    when: {predefined_ejection_location: "!none"}
+    out: [{"${predefined_ejection_location}": wp}, sm_idle]
+    duration: 10s
+    result: {sink: "null"}
+    module: sm
+  sm_sort_predefined_from_sensor:
+    in: [{cmd_sm_sort: job}, sm_idle, {color_sensor: wp}]
+    when: {predefined_ejection_location: "!none"}
+    inhibit: [sorting_machine_start]
+    out: [{"${predefined_ejection_location}": wp}, sm_idle]
+    duration: 5.5s
+    result: {sink: "null"}
+    module: sm
+
+  # High-bay warehouse (HBW): hands out a stored workpiece of the requested colour. Without one
+  # the request waits, as on the physical factory.
+  hbw_unload:
+    in: [{cmd_hbw_unload: job}, hbw_idle, {high_bay_warehouse_rack: wp}]
+    when: {wp.color: "${color}"}
+    out: [{high_bay_warehouse: wp}, hbw_idle]
+    duration: 45s
+    module: hbw
+
+# ---- what applications read ----
+
+sensors:
+  # state_of_machine
+  vgr_state: {occupied: vgr_idle, values: {true: ready, false: not ready}}
+  ov_state: {occupied: ov_idle, values: {true: ready, false: not ready}}
+  wt_state: {occupied: wt_idle, values: {true: ready, false: not ready}}
+  mm_state: {occupied: mm_idle, values: {true: ready, false: not ready}}
+  sm_state: {occupied: sm_idle, values: {true: ready, false: not ready}}
+  hbw_state: {occupied: hbw_idle, values: {true: ready, false: not ready}}
+  # status_of_light_barrier: interrupted while a workpiece is there
+  vgr_lb4: {occupied: high_bay_warehouse_delivery_station}
+  vgr_lb7: {occupied: delivery_pick_up_station}
+  ov_lb5: {occupied: oven}
+  mm_lb4: {occupied: milling_machine_belt}
+  sm_lb1: {occupied: sorting_machine_start}
+  sm_lb3: {occupied: color_sensor}
+  sm_lb6: {occupied: sink_1}
+  sm_lb7: {occupied: sink_2}
+  sm_lb8: {occupied: sink_3}
+  # raw MQTT inputs: light barriers 1 = free, 0 = interrupted
+  vgr_i4: {occupied: high_bay_warehouse_delivery_station, values: {true: 0, false: 1}}
+  vgr_i7: {occupied: delivery_pick_up_station, values: {true: 0, false: 1}}
+  ov_i5: {occupied: oven, values: {true: 0, false: 1}}
+  mm_i4: {occupied: milling_machine_belt, values: {true: 0, false: 1}}
+  sm_i1: {occupied: sorting_machine_start, values: {true: 0, false: 1}}
+  sm_i3: {occupied: color_sensor, values: {true: 0, false: 1}}
+  sm_i6: {occupied: sink_1, values: {true: 0, false: 1}}
+  sm_i7: {occupied: sink_2, values: {true: 0, false: 1}}
+  sm_i8: {occupied: sink_3, values: {true: 0, false: 1}}
+  # colour sensor brightness (lower is lighter); 1766 with nothing in front of it
+  sm_i2: {attribute: color, place: color_sensor, values: {white: 1000, red: 1350, blue: 1560, "null": 1766}}
+  # switches and motors: derived from whether the machine is working
+  ov_i1: {occupied: ov_idle, values: {true: 0, false: 1}}
+  mm_i1: {occupied: mm_idle, values: {true: 1, false: 0}}
+  vgr_motor: {occupied: vgr_idle, values: {true: 0, false: 512}}
+  ov_motor: {occupied: ov_idle, values: {true: 0, false: 512}}
+  wt_motor: {occupied: wt_idle, values: {true: 0, false: 512}}
+  mm_motor: {occupied: mm_idle, values: {true: 0, false: 512}}
+  sm_motor: {occupied: sm_idle, values: {true: 0, false: 512}}
+  hbw_stock: {count: high_bay_warehouse_rack}
+
+# ---- the factory's own HTTP API ----
+
+http:
+  # Every successful answer of app.py: keys sorted, Python time formats.
+  envelope: >-
+    {"attributes": ${body}, "end_time": "${time.end|dd-MMM-yyyy (HH:mm:ss.SSSSSS)}",
+    "link": "${request.url}", "process_time": "${time.elapsed|timedelta}",
+    "start_time": "${time.start|dd-MMM-yyyy (HH:mm:ss.SSSSSS)}"}
+  routes:
+    vgr_pick_up_and_transport:
+      get: /vgr/pick_up_and_transport
+      parameters:
+        machine: {required: true, values: [vgr_1], missing: *no_machine, invalid: *wrong_machine}
+        start: {required: true, values: *vgr_starts, missing: *wrong_machine, invalid: *unknown_position}
+        end: {required: true, values: *vgr_ends, missing: *wrong_machine, invalid: *unknown_position}
+      command: cmd_vgr_transport
+      returns-after: [vgr_drop, vgr_move_empty]
+      body: '[]'
+    ov_burn:
+      get: /ov/burn
+      parameters:
+        machine: {required: true, values: [ov_1], missing: *no_machine, invalid: *wrong_machine}
+        time: {default: 2, integer: true, invalid: *not_an_integer}
+      command: cmd_ov_burn
+      returns-after: [ov_burn, ov_burn_empty]
+      body: '[]'
+    wt_pick_up_and_transport:
+      get: /wt/pick_up_and_transport
+      parameters:
+        machine: {required: true, values: [wt_1], missing: *no_machine, invalid: *wrong_machine}
+        start: {required: true, values: [oven, milling_machine], missing: *wrong_machine, invalid: *unknown_position}
+        end: {required: true, values: [oven, milling_machine], missing: *wrong_machine, invalid: *unknown_position}
+      command: cmd_wt_transport
+      returns-after: [wt_drop, wt_move_empty]
+      body: '[]'
+    mm_mill:
+      get: /mm/mill
+      parameters:
+        machine: {required: true, values: [mm_1], missing: *no_machine, invalid: *wrong_machine}
+        start: {required: true, missing: *wrong_machine}
+        end: {required: true, missing: *wrong_machine}
+        time: {default: 2, integer: true, invalid: *not_an_integer}
+      command: cmd_mm_mill
+      returns-after: [mm_turn_back, mm_return, mm_mill_empty, mm_invalid]
+      body: '[]'
+    sm_detect_color:
+      get: /sm/detect_color
+      parameters:
+        machine: {required: true, values: [sm_1], missing: *no_machine, invalid: *wrong_machine}
+      command: cmd_sm_detect
+      returns-after: [sm_detect, sm_detect_at_sensor, sm_detect_nothing]
+      body: '[{"color": "${result.color}"}]'
+    sm_sort:
+      get: /sm/sort
+      parameters:
+        machine: {required: true, values: [sm_1], missing: *no_machine, invalid: *wrong_machine}
+        start: {required: true, values: [initial], missing: *wrong_machine, invalid: *sort_start}
+        predefined_ejection_location: {required: true, values: [sink_1, sink_2, sink_3, none],
+                                       missing: *wrong_machine, invalid: *sort_location}
+      command: cmd_sm_sort
+      returns-after: [sm_sort_white, sm_sort_red, sm_sort_blue, sm_sort_predefined, sm_sort_predefined_from_sensor]
+      body: '[{"sink": ${result.sink}}]'
+    hbw_unload_process:
+      get: /process/unload_from_hbw_container
+      parameters:
+        color: {required: true, values: [white, red, blue], missing: *wrong_machine, invalid: *unknown_color}
+      command: cmd_hbw_unload
+      returns-after: hbw_unload
+      body: '[]'
+
+    vgr_status_of_light_barrier:
+      get: /vgr/status_of_light_barrier
+      parameters:
+        machine: {required: true, values: [vgr_1], missing: *no_machine, invalid: *wrong_machine}
+        lb: {required: true, values: [4, 7], missing: *wrong_machine, invalid: *no_light_barrier}
+      reads: vgr_lb${lb}
+      body: '[{"interrupted": ${read}}]'
+    ov_status_of_light_barrier:
+      get: /ov/status_of_light_barrier
+      parameters:
+        machine: {required: true, values: [ov_1], missing: *no_machine, invalid: *wrong_machine}
+        lb: {required: true, values: [5], missing: *wrong_machine, invalid: *no_light_barrier}
+      reads: ov_lb${lb}
+      body: '[{"interrupted": ${read}}]'
+    mm_status_of_light_barrier:
+      get: /mm/status_of_light_barrier
+      parameters:
+        machine: {required: true, values: [mm_1], missing: *no_machine, invalid: *wrong_machine}
+        lb: {required: true, values: [4], missing: *wrong_machine, invalid: *no_light_barrier}
+      reads: mm_lb${lb}
+      body: '[{"interrupted": ${read}}]'
+    sm_status_of_light_barrier:
+      get: /sm/status_of_light_barrier
+      parameters:
+        machine: {required: true, values: [sm_1], missing: *no_machine, invalid: *wrong_machine}
+        lb: {required: true, values: [1, 3, 6, 7, 8], missing: *wrong_machine, invalid: *no_light_barrier}
+      reads: sm_lb${lb}
+      body: '[{"interrupted": ${read}}]'
+
+    vgr_state_of_machine:
+      get: /vgr/state_of_machine
+      parameters:
+        machine: {required: true, values: [vgr_1], missing: *no_machine, invalid: *wrong_machine}
+      reads: vgr_state
+      body: '[{"state": "${read}"}]'
+    ov_state_of_machine:
+      get: /ov/state_of_machine
+      parameters:
+        machine: {required: true, values: [ov_1], missing: *no_machine, invalid: *wrong_machine}
+      reads: ov_state
+      body: '[{"state": "${read}"}]'
+    wt_state_of_machine:
+      get: /wt/state_of_machine
+      parameters:
+        machine: {required: true, values: [wt_1], missing: *no_machine, invalid: *wrong_machine}
+      reads: wt_state
+      body: '[{"state": "${read}"}]'
+    mm_state_of_machine:
+      get: /mm/state_of_machine
+      parameters:
+        machine: {required: true, values: [mm_1], missing: *no_machine, invalid: *wrong_machine}
+      reads: mm_state
+      body: '[{"state": "${read}"}]'
+    sm_state_of_machine:
+      get: /sm/state_of_machine
+      parameters:
+        machine: {required: true, values: [sm_1], missing: *no_machine, invalid: *wrong_machine}
+      reads: sm_state
+      body: '[{"state": "${read}"}]'
+
+# ---- the factory's MQTT status messages: each station's full state twice per second ----
+
+events:
+  - mqtt: FTFactory/VGR_1
+    every: 500ms
+    payload: >-
+      {"id": "${uuid}", "station": "VGR_1", "timestamp": "${now|yyyy-MM-dd HH:mm:ss.SS}",
+      "i1_pos_switch": 0, "i2_pos_switch": 1, "i3_pos_switch": 1,
+      "i7_light_barrier": ${sensor.vgr_i7}, "i4_light_barrier": ${sensor.vgr_i4}, "i8_color_sensor": 1575,
+      "o7_compressor_level": ${sensor.vgr_motor}, "o8_valve_open": ${sensor.vgr_motor},
+      "m1_speed": ${sensor.vgr_motor}, "m2_speed": ${sensor.vgr_motor}, "m3_speed": ${sensor.vgr_motor},
+      "current_state": "${sensor.vgr_state}", "current_task": "", "current_task_duration": 0, "current_sub_task": "",
+      "current_pos_x": 0, "current_pos_y": 0, "current_pos_z": 0,
+      "target_pos_x": 0, "target_pos_y": 0, "target_pos_z": 0}
+  - mqtt: FTFactory/OV_1
+    every: 500ms
+    payload: >-
+      {"id": "${uuid}", "station": "OV_1", "timestamp": "${now|yyyy-MM-dd HH:mm:ss.SS}",
+      "i1_pos_switch": ${sensor.ov_i1}, "i2_pos_switch": 0, "i5_light_barrier": ${sensor.ov_i5},
+      "m1_speed": ${sensor.ov_motor}, "o7_valve": 0, "o8_compressor": 0,
+      "current_state": "${sensor.ov_state}", "current_task": "", "current_task_duration": 0, "current_sub_task": ""}
+  - mqtt: FTFactory/WT_1
+    every: 500ms
+    payload: >-
+      {"id": "${uuid}", "station": "WT_1", "timestamp": "${now|yyyy-MM-dd HH:mm:ss.SS}",
+      "i3_pos_switch": 0, "i4_pos_switch": 0, "m2_speed": ${sensor.wt_motor},
+      "o5_valve": 0, "o6_valve": 0, "o8_compressor": 0,
+      "current_state": "${sensor.wt_state}", "current_task": "", "current_task_duration": 0, "current_sub_task": ""}
+  - mqtt: FTFactory/MM_1
+    every: 500ms
+    payload: >-
+      {"id": "${uuid}", "station": "MM_1", "timestamp": "${now|yyyy-MM-dd HH:mm:ss.SS}",
+      "i1_pos_switch": ${sensor.mm_i1}, "i2_pos_switch": 0, "i3_pos_switch": 0, "i4_light_barrier": ${sensor.mm_i4},
+      "m1_speed": ${sensor.mm_motor}, "m2_speed": 0, "m3_speed": ${sensor.mm_motor}, "o7_valve": 0, "o8_compressor": 0,
+      "current_state": "${sensor.mm_state}", "current_task": "", "current_task_duration": 0, "current_sub_task": ""}
+  - mqtt: FTFactory/SM_1
+    every: 500ms
+    payload: >-
+      {"id": "${uuid}", "station": "SM_1", "timestamp": "${now|yyyy-MM-dd HH:mm:ss.SS}",
+      "i1_light_barrier": ${sensor.sm_i1}, "i2_color_sensor": ${sensor.sm_i2}, "i3_light_barrier": ${sensor.sm_i3},
+      "i6_light_barrier": ${sensor.sm_i6}, "i7_light_barrier": ${sensor.sm_i7}, "i8_light_barrier": ${sensor.sm_i8},
+      "m1_speed": ${sensor.sm_motor}, "o5_valve": 0, "o6_valve": 0, "o7_valve": 0, "o8_compressor": 0,
+      "current_state": "${sensor.sm_state}", "current_task": "", "current_task_duration": 0, "current_sub_task": ""}

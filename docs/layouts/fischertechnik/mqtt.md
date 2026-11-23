@@ -56,16 +56,17 @@ Source: `hardware/generic/*_txts.py` in `smart-factory-python`, plus one recorde
 
 ## Simulator
 
-The simulator publishes the same messages for the running Fischertechnik simulation (`FischertechnikMqttPublisher`).
+The layout file `src/main/resources/layouts/fischertechnik.yaml` declares the same messages (`events:`); the generic event publisher sends them for the running Fischertechnik simulation.
 
-- Broker: `simulation.fischertechnik.mqtt.broker-url`, default `tcp://localhost:1883`; in `docker compose` the bundled Mosquitto. Optional `username` and `password`.
-- Topics `FTFactory/VGR_1`, `OV_1`, `WT_1`, `MM_1`, `SM_1`, every 500 ms (`interval`). HBW_1 is not published.
-- Nothing is published while no Fischertechnik simulation is running, or while several are.
-- Without a reachable broker the simulator keeps running and retries every 5 s.
+- Broker: `simulation.events.mqtt.broker-url`, default `tcp://localhost:1883`; in `docker compose` the bundled Mosquitto. Optional `username` and `password`.
+- Topics `FTFactory/VGR_1`, `OV_1`, `WT_1`, `MM_1`, `SM_1`, every 500 ms (`every:` in the layout). HBW_1 is not published.
+- Messages are for the most recently started running Fischertechnik simulation; nothing is published while none runs.
+- Without a reachable broker the simulator keeps running and retries every 10 s.
+- Sensor faults switched in the UI change the published values too (e.g. a stuck light barrier).
 
 Differences from the physical factory:
 
 - WT_1 reports its own status, not always `ready`.
 - Axis and position switches, valves and the compressor report fixed idle values; motor speeds are 512 while the machine works.
-- `SM_1.i2_color_sensor` is 1766 without a workpiece at the colour sensor, and 1000 / 1350 / 1560 for a detected white / red / blue workpiece there.
-- `VGR_1.current_pos_*` and `target_pos_*` are 0.
+- `current_task` and `current_sub_task` are empty and `current_task_duration` is 0.
+- `SM_1.i2_color_sensor` is 1766 without a workpiece at the colour sensor, and 1000 / 1350 / 1560 for a white / red / blue workpiece there.

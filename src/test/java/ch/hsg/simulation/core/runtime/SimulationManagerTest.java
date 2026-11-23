@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SimulationManagerTest {
 
-    private final SimulationManager manager = new SimulationManager(() -> List.of(TestNets.oven()));
+    private final SimulationManager manager = new SimulationManager(() -> List.of(TestNets.factory()));
     private final SimulationControl control = manager;
 
     @AfterEach
@@ -41,7 +41,7 @@ class SimulationManagerTest {
     @Test
     void aLayoutCannotBeDefinedTwice() {
         assertThrows(IllegalArgumentException.class,
-                () -> new SimulationManager(() -> List.of(TestNets.oven(), TestNets.oven())));
+                () -> new SimulationManager(() -> List.of(TestNets.factory(), TestNets.factory())));
     }
 
     @Test
@@ -87,7 +87,7 @@ class SimulationManagerTest {
         control.placeToken(id, "oven_platform", "wp1", Map.of());
         control.setSpeed(id, 200); // 12 s of burning in about 60 ms
 
-        CommandHandle handle = control.command(id, "cmd_burn", Map.of(), "burn_end", null);
+        CommandHandle handle = control.command(id, "cmd_burn", Map.of(), List.of("burn_end"), null);
         handle.completion().get(5, TimeUnit.SECONDS);
         assertEquals(200.0, control.snapshot(id).speed());
 

@@ -32,4 +32,4 @@ Put a workpiece on the delivery station first.
 - `--sink sink_1|sink_2|sink_3` sorts into a fixed sink (default `sink_1`); `--sink none` sorts by colour.
 - `--color white|red|blue` sets the workpiece colour for `--setup`.
 
-Switch on a fault in the simulator (Fault mode, e.g. `MISSES_WORKPIECE` on `vgr_1`) to see how the application behaves when a machine does not do what it reports.
+Switch on a fault in the simulator to see how the application behaves when the factory does not do what it reports, e.g. `TOKEN_LOSS` on transition `vgr_drop` (the gripper drops the workpiece) or `STUCK` on sensor `ov_lb5` (the oven's light barrier stops changing).

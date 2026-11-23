@@ -21,13 +21,14 @@ class NetDefinitionTest {
 
     private static NetDefinition net(List<Place> places, List<Transition> transitions, List<Sensor> sensors,
                                      List<Route> routes) {
-        return new NetDefinition("n", null, null, places, transitions, sensors, routes, List.of(), null);
+        return new NetDefinition("n", null, null, places, transitions, sensors,
+                new NetDefinition.HttpInterface(null, routes), List.of(), null, List.of());
     }
 
     @Test
     void theTestNetIsValid() {
-        NetDefinition net = TestNets.oven();
-        assertEquals(3, net.transitions().size());
+        NetDefinition net = TestNets.factory();
+        assertEquals(8, net.transitions().size());
         assertTrue(net.route("burn").isPresent());
     }
 
@@ -59,7 +60,20 @@ class NetDefinitionTest {
         assertThrows(IllegalArgumentException.class, () -> net(List.of(Place.of("a")), List.of(),
                 List.of(Sensor.occupied("s", "missing")), List.of()));
         assertThrows(IllegalArgumentException.class, () -> net(List.of(Place.of("a")), List.of(), List.of(),
-                List.of(new Route("r", RouteKind.COMMAND, "GET", "/r", "a", "missing", null, null, null))));
+                List.of(new Route("r", RouteKind.COMMAND, "GET", "/r", List.of(), "a", List.of("missing"), null, null, null))));
+        assertThrows(IllegalArgumentException.class, () -> net(List.of(Place.of("a")), List.of(), List.of(),
+                List.of(new Route("r", RouteKind.QUERY, "GET", "/r", List.of(), null, null, null, "missing", null))));
+    }
+
+    @Test
+    void guardsAndInhibitorsMustNameExistingParts() {
+        assertThrows(IllegalArgumentException.class, () -> new Transition("t", List.of(Arc.of("a")), List.of(),
+                Duration.ZERO, null, null, Map.of("wp.color", "red"), null, null, 0, null));
+        assertThrows(IllegalArgumentException.class, () -> net(List.of(Place.of("a")),
+                List.of(new Transition("t", List.of(Arc.of("a")), List.of(), Duration.ZERO, null, null, null,
+                        List.of("missing"), null, 0, null)), List.of(), List.of()));
+        assertThrows(IllegalArgumentException.class, () -> new Transition("t", List.of(Arc.of("a")), List.of(),
+                Duration.ZERO, "time", null, null, null, null, 0, null));
     }
 
     @Test

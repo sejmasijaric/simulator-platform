@@ -115,20 +115,22 @@ From `workflows/demos_openday/Production_Log.csv` (March 2021, older setup). Use
 
 ## Using the simulator
 
-- Base URL: `http://localhost:8080` instead of `http://192.168.0.21:5000`. Paths, parameters and responses are the same.
-- Create and start one Fischertechnik simulation in the web UI first. With none running, calls return 503; with several, 409.
-- The simulator switches the simulation to real time (1×) if needed. A higher speed in the UI makes the commands finish faster.
-- Implemented: the six commands above, `/process/unload_from_hbw_container?color=`, `status_of_light_barrier` (vgr, ov, mm, sm) and `state_of_machine`.
-- Workpieces are placed in the UI (or with `POST /simulations/{id}/entities`). The positions are the API names plus `oven_chamber`, `milling_machine_belt`, `sorting_machine_start`, `color_sensor` and the warehouse stock `high_bay_warehouse_rack` (up to 9 workpieces).
-- Light barriers are named `<machine>_lb<input>`, e.g. `sm_1_lb6`.
+The factory is modelled as a Petri net in `src/main/resources/layouts/fischertechnik.yaml`; the generic layout adapter serves the routes declared there.
+
+- Base URL: `http://localhost:8080` instead of `http://192.168.0.21:5000`. Paths, parameters, responses and error messages are the same.
+- Create and start a Fischertechnik simulation in the web UI first. With none running, calls return 503. With several, the most recently started one answers.
+- The simulator switches the simulation to real time (1×) if needed. A higher speed makes the commands finish faster.
+- Implemented: the six commands above, `/process/unload_from_hbw_container?color=`, `status_of_light_barrier` (vgr, ov, mm, sm) and `state_of_machine` (vgr, ov, wt, mm, sm).
+- Workpieces are tokens placed in the UI (or with `POST /simulations/{id}/tokens`). The places are the API's position names plus `oven_chamber`, `mm_milled`, `milling_machine_belt`, `sorting_machine_start`, `color_sensor` and the warehouse stock `high_bay_warehouse_rack` (up to 9).
+- Light barriers are sensors named `<machine>_lb<input>`, e.g. `sm_lb6`.
 
 Differences from the physical factory:
 
-- `/sm/detect_color` with no workpiece returns `none` after 5 s; the physical belt runs forever.
-- `/sm/sort` with `start=sm_cb` or `predefined_ejection_location=corner` returns 400 (not simulated yet).
-- `/sm/sort` with location `none` and no detectable workpiece returns 400 right away instead of running the belt first.
-- The VGR accepts `delivery_pick_up_station`, `color_detection_delivery_pick_up_station`, `high_bay_warehouse`, `oven`, `sink_1..3` and (as end) `high_bay_warehouse_delivery_station`. Other positions return 400.
-- `/process/unload_from_hbw_container` without a stored workpiece of that colour returns 400; the physical call waits forever.
+- `/sm/sort` with `start=sm_cb` or `predefined_ejection_location=corner` returns 400 (not modelled yet).
+- `/sm/sort` with location `none` and no detectable colour waits until its timeout instead of answering 400.
+- `use_nfc` is accepted and ignored (the physical machine takes 1 s longer).
+- A gripper or transport move to an occupied position waits until it is free; the physical gripper sets the workpiece down anyway.
+- `/process/unload_from_hbw_container` without a stored workpiece of that colour waits, as on the physical factory, until the route's timeout (30 min).
 - Durations are starting values (see above) until the lab recordings are in.
 
 ## Endpoints not yet implemented in the simulator

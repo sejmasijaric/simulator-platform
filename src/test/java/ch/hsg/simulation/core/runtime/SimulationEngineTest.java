@@ -7,6 +7,10 @@ import ch.hsg.simulation.core.event.EventType;
 import ch.hsg.simulation.core.event.SimulationEvent;
 import ch.hsg.simulation.core.fault.NetFault;
 import ch.hsg.simulation.core.fault.SensorFault;
+import ch.hsg.simulation.core.net.NetDefinition;
+import ch.hsg.simulation.core.net.NetDefinition.Arc;
+import ch.hsg.simulation.core.net.NetDefinition.Place;
+import ch.hsg.simulation.core.net.NetDefinition.Transition;
 import ch.hsg.simulation.core.net.Token;
 import ch.hsg.simulation.core.port.CommandHandle;
 import ch.hsg.simulation.core.port.SimulationStatus;
@@ -33,7 +37,7 @@ class SimulationEngineTest {
 
     @BeforeEach
     void setUp() {
-        engine = new SimulationEngine(UUID.randomUUID(), TestNets.oven());
+        engine = new SimulationEngine(UUID.randomUUID(), TestNets.factory());
         engine.start();
     }
 
@@ -186,6 +190,101 @@ class SimulationEngineTest {
                 EventType.TRANSITION_STARTED, EventType.TRANSITION_COMPLETED,
                 EventType.TRANSITION_STARTED, EventType.TRANSITION_COMPLETED,
                 EventType.COMMAND_COMPLETED), types);
+    }
+
+    // ---- guards, inhibitors, durations from parameters, results ----
+
+    @Test
+    void aParameterMakesTheBurnLonger() {
+        engine.placeToken("oven_platform", "wp1", Map.of());
+        CommandHandle handle = engine.command("cmd_burn", Map.of("time", "3"), "burn_end", null);
+        engine.runUntil(seconds(30));
+        assertEquals(seconds(15), handle.completion().join().time());
+    }
+
+    @Test
+    void sortingByColourFollowsTheGuardAndReportsTheSink() {
+        engine.placeToken("sm_start", "wp1", Map.of("color", "red"));
+        CommandHandle handle = engine.command("cmd_sort", Map.of("location", "none"), "sort_red_by_color", null);
+        engine.runUntil(seconds(10));
+
+        assertEquals(List.of("wp1"), idsAt("sink_2"));
+        assertEquals(Map.of("sink", "2"), handle.completion().join().data().get("result"));
+    }
+
+    @Test
+    void aPredefinedSinkComesFromTheRequest() {
+        engine.placeToken("sm_start", "wp1", Map.of("color", "red"));
+        CommandHandle handle = engine.command("cmd_sort", Map.of("location", "sink_1"), "sort_predefined", null);
+        engine.runUntil(seconds(10));
+
+        assertEquals(List.of("wp1"), idsAt("sink_1"));
+        assertEquals(Map.of("sink", "null"), handle.completion().join().data().get("result"));
+    }
+
+    @Test
+    void detectionReportsTheColourOrNothingWhenThePlaceIsEmpty() {
+        CommandHandle nothing = engine.command("cmd_detect", Map.of(), "detect_nothing", null);
+        engine.runUntil(seconds(5));
+        assertEquals(Map.of("color", "none"), nothing.completion().join().data().get("result"));
+
+        engine.placeToken("sm_start", "wp1", Map.of("color", "blue"));
+        CommandHandle blue = engine.command("cmd_detect", Map.of(), "detect", null);
+        engine.runUntil(seconds(10));
+        assertEquals(Map.of("color", "blue"), blue.completion().join().data().get("result"));
+        assertEquals(List.of("wp1"), idsAt("sm_start"));
+    }
+
+    @Test
+    void theWarehouseHandsOutAWorkpieceOfTheRequestedColour() {
+        engine.placeToken("rack", "white1", Map.of("color", "white"));
+        engine.placeToken("rack", "red1", Map.of("color", "red"));
+
+        CommandHandle handle = engine.command("cmd_unload", Map.of("color", "red"), "unload", null);
+        engine.runUntil(seconds(3));
+
+        assertTrue(handle.completion().isDone());
+        assertEquals(List.of("red1"), idsAt("hbw_out"));
+        assertEquals(List.of("white1"), idsAt("rack"));
+    }
+
+    @Test
+    void anUnloadWaitsWhileNoWorkpieceOfThatColourIsStored() {
+        engine.placeToken("rack", "white1", Map.of("color", "white"));
+        CommandHandle handle = engine.command("cmd_unload", Map.of("color", "blue"), "unload", null);
+        engine.runUntil(seconds(30));
+        assertFalse(handle.completion().isDone());
+    }
+
+    @Test
+    void aRequestCanEndInSeveralWaysAndGuardsCanBeNegated() {
+        NetDefinition net = NetDefinition.of("ends", List.of(Place.of("cmd"), new Place("idle", 1, 1, null),
+                        Place.of("start"), Place.of("end")),
+                List.of(new Transition("carry", List.of(Arc.of("cmd", "job"), Arc.of("idle"), Arc.of("${from}", "wp")),
+                                List.of(Arc.of("end", "wp"), Arc.of("idle")), seconds(4), null, null,
+                                Map.of("mode", "!skip"), null, null, 0, null),
+                        new Transition("carry_nothing", List.of(Arc.of("cmd", "job"), Arc.of("idle")),
+                                List.of(Arc.of("idle")), seconds(2), null, null, null, List.of("${from}"), null, 0, null)),
+                List.of());
+        try (SimulationEngine other = new SimulationEngine(UUID.randomUUID(), net)) {
+            other.start();
+            CommandHandle empty = other.command("cmd", Map.of("from", "start", "mode", "go"),
+                    List.of("carry", "carry_nothing"), null);
+            other.runUntil(seconds(2));
+            assertEquals("carry_nothing", empty.completion().join().subject());
+
+            other.placeToken("start", "wp1", Map.of());
+            CommandHandle full = other.command("cmd", Map.of("from", "start", "mode", "go"),
+                    List.of("carry", "carry_nothing"), null);
+            other.runUntil(seconds(6));
+            assertEquals("carry", full.completion().join().subject());
+
+            other.placeToken("start", "wp2", Map.of());
+            CommandHandle skipped = other.command("cmd", Map.of("from", "start", "mode", "skip"),
+                    List.of("carry", "carry_nothing"), null);
+            other.runUntil(seconds(30));
+            assertFalse(skipped.completion().isDone());
+        }
     }
 
     // ---- sensors ----
@@ -341,7 +440,7 @@ class SimulationEngineTest {
 
     @Test
     void unknownNamesAreRejected() {
-        assertThrows(NotFoundException.class, () -> engine.command("nope", Map.of(), null, null));
+        assertThrows(NotFoundException.class, () -> engine.command("nope", Map.of(), (String) null, null));
         assertThrows(NotFoundException.class, () -> engine.command("cmd_burn", Map.of(), "nope", null));
         assertThrows(NotFoundException.class, () -> engine.setSensorFault("nope", SensorFault.dropout()));
         assertThrows(NotFoundException.class, () -> engine.setNetFault("nope", NetFault.blocked()));

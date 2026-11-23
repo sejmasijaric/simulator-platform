@@ -1,6 +1,6 @@
 # ADR 0006: Fault switching in core, fault behaviour in layouts
 
-Status: Accepted (2026-10-28)
+Status: Superseded by [0013](0013-generic-faults-on-two-levels.md) (2026-11-23); accepted 2026-10-28
 
 ## Context
 Error cases must be testable. The physical layout does not report failures; it behaves differently (item not moved, sensor not changing). What a failure looks like depends on the component.

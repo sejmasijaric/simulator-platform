@@ -1,6 +1,6 @@
 # ADR 0007: Sensors derive their value from the model
 
-Status: Accepted (2026-10-28)
+Status: Superseded by [0014](0014-sensors-are-read-on-demand.md) (2026-11-23); accepted 2026-10-28
 
 ## Context
 A sensor value follows from the model, e.g. a light barrier is interrupted when its position is occupied. Actuators should not have to update sensors.

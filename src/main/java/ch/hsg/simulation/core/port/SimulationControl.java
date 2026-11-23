@@ -6,6 +6,7 @@ import ch.hsg.simulation.core.fault.SensorFault;
 import ch.hsg.simulation.core.net.NetDefinition;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,10 +50,10 @@ public interface SimulationControl {
 
     /**
      * Puts a request token with {@code parameters} into {@code commandPlace}. The handle completes
-     * when {@code returnsAfter} fires for this request; with {@code returnsAfter} null it is
-     * complete at once.
+     * when any of {@code returnsAfter} fires for this request; with none it is complete at once.
      */
-    CommandHandle command(UUID id, String commandPlace, Map<String, ?> parameters, String returnsAfter, String origin);
+    CommandHandle command(UUID id, String commandPlace, Map<String, ?> parameters, Collection<String> returnsAfter,
+                          String origin);
 
     /** Every sensor's value as an application reads it now, faults applied. */
     Map<String, Object> readSensors(UUID id);

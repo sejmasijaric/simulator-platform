@@ -12,9 +12,11 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -24,10 +26,13 @@ import java.util.function.Supplier;
  * <p>Rules:
  * <ul>
  *   <li>Transitions are tried by priority (high first), then in declaration order.</li>
- *   <li>Each input arc takes the oldest token of its place. An arc whose place is a template
- *       ({@code ${start}}) is resolved from the parameters of the tokens consumed before it
- *       without a variable, i.e. the command token.</li>
- *   <li>A transition is enabled only if every output place keeps within its capacity.</li>
+ *   <li>A transition is enabled when every input arc finds a token, its inhibitor places are
+ *       empty, its guard holds and every output place keeps within its capacity.</li>
+ *   <li>Each input arc takes the oldest token of its place that satisfies the guard conditions
+ *       on its variable.</li>
+ *   <li>The request parameters of a firing are the attributes of the tokens it consumes, the
+ *       earlier arc winning; template places ({@code ${start}}), guard values and results are
+ *       filled from them, and {@code ${variable.attribute}} reads a bound token.</li>
  *   <li>The firing belongs to the command of the first consumed token that has one.</li>
  * </ul>
  */
@@ -43,12 +48,14 @@ public final class NetInterpreter {
 
     /** One firing: what it takes now, what it gives back after {@code duration}, what it loses. */
     public record Firing(Transition transition, List<Consumed> consumed, List<Produced> produced,
-                         List<Token> lost, Duration duration, UUID commandId, Map<String, Object> parameters) {
+                         List<Token> lost, Duration duration, UUID commandId, Map<String, Object> parameters,
+                         Map<String, Object> result) {
         public Firing {
             consumed = List.copyOf(consumed);
             produced = List.copyOf(produced);
             lost = List.copyOf(lost);
-            parameters = Map.copyOf(parameters);
+            parameters = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(parameters));
+            result = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(result));
         }
     }
 
@@ -90,19 +97,28 @@ public final class NetInterpreter {
 
     private Optional<Firing> tryBind(Transition transition, Marking marking, Faults faults,
                                      Supplier<String> newTokenId) {
+        for (String inhibitor : transition.inhibitors()) {
+            if (!Templates.isTemplate(inhibitor) && marking.occupied(inhibitor)) {
+                return Optional.empty();
+            }
+        }
+
         List<Consumed> consumed = new ArrayList<>();
         Set<String> taken = new HashSet<>();
         Map<String, Object> parameters = new LinkedHashMap<>();
         Map<String, Token> variables = new HashMap<>();
         Map<String, Integer> leaving = new HashMap<>();
+        Function<String, Object> lookup = key -> lookup(key, parameters, variables);
 
         for (Arc arc : transition.inputs()) {
-            Optional<String> place = resolve(arc.place(), parameters, variables);
+            Optional<String> place = resolve(arc.place(), lookup);
             if (place.isEmpty() || !marking.hasPlace(place.get())) {
                 return Optional.empty();
             }
             Optional<Token> token = marking.tokensAt(place.get()).stream()
                     .filter(candidate -> !taken.contains(candidate.id()))
+                    .filter(candidate -> arc.variable() == null
+                            || guardHoldsFor(transition, arc.variable(), candidate, lookup))
                     .findFirst();
             if (token.isEmpty()) {
                 return Optional.empty();
@@ -112,13 +128,23 @@ public final class NetInterpreter {
             consumed.add(new Consumed(place.get(), token.get(), arc.variable()));
             if (arc.variable() != null) {
                 variables.put(arc.variable(), token.get());
-            } else {
-                token.get().attributes().forEach(parameters::putIfAbsent);
+            }
+            token.get().attributes().forEach(parameters::putIfAbsent);
+        }
+        if (!parameterGuardHolds(transition, lookup)) {
+            return Optional.empty();
+        }
+        for (String inhibitor : transition.inhibitors()) {
+            if (Templates.isTemplate(inhibitor)) {
+                Optional<String> place = resolve(inhibitor, lookup);
+                if (place.isEmpty() || !marking.hasPlace(place.get()) || marking.occupied(place.get())) {
+                    return Optional.empty();
+                }
             }
         }
 
         UUID commandId = consumed.stream().map(entry -> entry.token().commandId())
-                .filter(java.util.Objects::nonNull).findFirst().orElse(null);
+                .filter(Objects::nonNull).findFirst().orElse(null);
         Optional<String> misroute = faults.misrouteTarget(transition.name());
         boolean losesTokens = faults.losesTokens(transition.name());
 
@@ -126,7 +152,7 @@ public final class NetInterpreter {
         List<Token> lost = new ArrayList<>();
         Map<String, Integer> arriving = new HashMap<>();
         for (Arc arc : transition.outputs()) {
-            Optional<String> place = resolve(arc.place(), parameters, variables);
+            Optional<String> place = resolve(arc.place(), lookup);
             if (place.isEmpty() || !marking.hasPlace(place.get())) {
                 return Optional.empty();
             }
@@ -159,29 +185,94 @@ public final class NetInterpreter {
             }
         }
 
-        Duration duration = scaled(transition.duration(), faults.durationFactor(transition.name()));
-        return Optional.of(new Firing(transition, consumed, produced, lost, duration, commandId, parameters));
+        Duration duration = scaled(durationOf(transition, parameters), faults.durationFactor(transition.name()));
+        Map<String, Object> result = new LinkedHashMap<>();
+        transition.result().forEach((key, template) -> result.put(key, renderLenient(template, lookup)));
+        return Optional.of(new Firing(transition, consumed, produced, lost, duration, commandId, parameters, result));
     }
 
-    /**
-     * Fills a template place: {@code ${name}} from the command's parameters,
-     * {@code ${variable.attribute}} from a bound token. Empty if a value is missing.
-     */
-    private static Optional<String> resolve(String place, Map<String, Object> parameters, Map<String, Token> variables) {
-        if (!Templates.isTemplate(place)) {
-            return Optional.of(place);
+    /** Guard conditions on {@code variable.attribute} for a candidate token of that variable. */
+    private static boolean guardHoldsFor(Transition transition, String variable, Token candidate,
+                                         Function<String, Object> lookup) {
+        String prefix = variable + ".";
+        for (Map.Entry<String, String> condition : transition.guard().entrySet()) {
+            if (condition.getKey().startsWith(prefix)) {
+                Object actual = candidate.attribute(condition.getKey().substring(prefix.length()));
+                if (!matches(condition.getValue(), actual, lookup)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /** Guard conditions on request parameters, checked once all inputs are bound. */
+    private static boolean parameterGuardHolds(Transition transition, Function<String, Object> lookup) {
+        for (Map.Entry<String, String> condition : transition.guard().entrySet()) {
+            if (condition.getKey().indexOf('.') > 0) {
+                continue;
+            }
+            if (!matches(condition.getValue(), lookup.apply(condition.getKey()), lookup)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** {@code expected} equals {@code actual}, or with a leading {@code !} does not. */
+    private static boolean matches(String expected, Object actual, Function<String, Object> lookup) {
+        boolean negated = expected.startsWith("!");
+        Optional<String> value = resolve(negated ? expected.substring(1) : expected, lookup);
+        if (value.isEmpty()) {
+            return false;
+        }
+        return negated != value.get().equals(String.valueOf(actual));
+    }
+
+    private static Object lookup(String key, Map<String, Object> parameters, Map<String, Token> variables) {
+        int dot = key.indexOf('.');
+        if (dot > 0 && variables.containsKey(key.substring(0, dot))) {
+            return variables.get(key.substring(0, dot)).attribute(key.substring(dot + 1));
+        }
+        return parameters.get(key);
+    }
+
+    /** Fills a template; empty if a value is missing. Plain text is returned as it is. */
+    private static Optional<String> resolve(String template, Function<String, Object> lookup) {
+        if (!Templates.isTemplate(template)) {
+            return Optional.of(template);
         }
         try {
-            return Optional.of(Templates.render(place, key -> {
-                int dot = key.indexOf('.');
-                if (dot > 0 && variables.containsKey(key.substring(0, dot))) {
-                    return variables.get(key.substring(0, dot)).attribute(key.substring(dot + 1));
-                }
-                return parameters.get(key);
-            }));
+            return Optional.of(Templates.render(template, lookup));
         } catch (IllegalArgumentException missing) {
             return Optional.empty();
         }
+    }
+
+    /** Results tolerate missing values: they render as {@code null}. */
+    private static Object renderLenient(String template, Function<String, Object> lookup) {
+        if (!Templates.isTemplate(template)) {
+            return template;
+        }
+        return Templates.render(template, key -> {
+            Object value = lookup.apply(key);
+            return value == null ? "null" : value;
+        });
+    }
+
+    private static Duration durationOf(Transition transition, Map<String, Object> parameters) {
+        if (transition.durationParameter() == null) {
+            return transition.duration();
+        }
+        Object value = parameters.get(transition.durationParameter());
+        double units;
+        try {
+            units = value == null ? 0 : Double.parseDouble(String.valueOf(value));
+        } catch (NumberFormatException notANumber) {
+            units = 0;
+        }
+        long extra = Math.round(transition.durationPerUnit().toNanos() * Math.max(units, 0));
+        return transition.duration().plusNanos(extra);
     }
 
     private static Duration scaled(Duration duration, double factor) {

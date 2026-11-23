@@ -1,6 +1,6 @@
 # ADR 0004: Components propose changes, engine applies them atomically
 
-Status: Accepted (2026-10-28)
+Status: Superseded by [0011](0011-layouts-as-timed-coloured-petri-nets.md): a firing is atomic (2026-11-23); accepted 2026-10-28
 
 ## Context
 Phases are applied later than the component computes them (ADR 0003). A failing change must not leave the model half-updated.

@@ -1,6 +1,6 @@
 # ADR 0001: Layouts in Java, core without framework
 
-Status: Accepted (2026-10-28)
+Status: Superseded by [0011](0011-layouts-as-timed-coloured-petri-nets.md) (layouts) and [0012](0012-ports-of-the-core.md) (framework-free core) (2026-11-23); accepted 2026-10-28
 
 ## Context
 The core must be reused for several layouts. Layout behaviour (multi-step movements, sensors, faults) cannot be expressed in a configuration format like YAML without building a small programming language.

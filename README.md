@@ -1,40 +1,35 @@
 # Simulation Platform
 
-Simulation of physical lab layouts (Fischertechnik Factory 4.0, Dobot + conveyor). An application that works against the simulator should work against the physical layout without changes.
+Simulation of physical lab layouts (Fischertechnik Factory 4.0; Dobot + conveyor next). An application that works against the simulator works against the physical layout without changes.
 
-- Class contracts: [docs/SIMULATION_CLASS_ARCHITECTURE.md](docs/SIMULATION_CLASS_ARCHITECTURE.md)
-- Diagrams: [docs/architecture.md](docs/architecture.md)
+Each layout is a **timed, coloured Petri net in a YAML file**: places for positions, machine states and request queues, transitions for what the machines can do, sensors derived from where the tokens are, and the layout's own HTTP API and MQTT messages. One generic core runs any such file; no layout needs Java code.
+
+- Architecture: [docs/architecture.md](docs/architecture.md)
+- Layout format: [docs/layouts/layout-format.md](docs/layouts/layout-format.md)
 - Decisions: [docs/adr](docs/adr/README.md)
+- Physical interfaces: [Fischertechnik](docs/layouts/fischertechnik/http-api.md), [Dobot](docs/layouts/dobot/http-api.md)
 
 ## Status
 
-- Implemented: generic core, REST control API, web UI, demo layout, Fischertechnik Factory 4.0 layout with its hardware-compatible HTTP API and MQTT status messages ([docs/layouts/fischertechnik](docs/layouts/fischertechnik/http-api.md)); Dobot + conveyor layout with the Dobot's hardware-compatible HTTP API ([docs/layouts/dobot](docs/layouts/dobot/http-api.md)), conveyor still a placeholder.
-- Next: validate both layouts against lab recordings; model the conveyor once its control is known ([Dobot lab checklist](docs/layouts/dobot/lab-checklist.md)).
-- Example applications per layout: [applications](applications/README.md).
+- Implemented: the Petri net core (guards, inhibitor arcs, parameter-dependent durations, results), generic faults on sensor and net level, the YAML loader, the REST control API, the generic layout HTTP API and MQTT publisher, and the Fischertechnik factory as [fischertechnik.yaml](src/main/resources/layouts/fischertechnik.yaml).
+- Next: adapt the web UI to the Petri net (net view, fault panel, module runner); model the Dobot + conveyor in YAML; validate timings against lab recordings.
+- Example application: [applications](applications/README.md).
 
 ## Packages (`ch.hsg.simulation`)
 
-| Package | Classes |
+| Package | Content |
 |---|---|
-| `api` | `SimulationDefinition`, `Component`, `Capability`, `ParameterType`, `FaultMode` |
-| `model` | `Simulation`, `Entity`, `ComponentState`, snapshots, exceptions |
-| `execution` | `ComponentAction`, `ComponentExecutionResult`, `ScheduledChange`, `StateChange` |
-| `event` | `SimulationEvent`, `EventType`, `EventLog` |
-| `runtime` | `SimulationManager`, `SimulationEngine`, `SimulationClock`, `EventQueue`, `SimulationContext`, `RealTimeDriver` |
-| `app` | Spring Boot application, wiring, `RealTimeService` |
-| `adapters.rest` | REST control API |
-| `adapters.fischertechnik` | Hardware-compatible HTTP API and MQTT publisher of the Fischertechnik factory |
-| `adapters.dobot` | Hardware-compatible HTTP API of the Dobot |
-| `systems.common` | Components shared by layouts: slot, rack, conveyor, light barrier |
-| `systems.demo` | Demo layout: transporter |
-| `systems.fischertechnik` | Fischertechnik layout: gripper, oven, transport, milling and sorting machine, warehouse |
-| `systems.dobot` | Dobot + conveyor layout: Dobot arm, poses, playback files |
+| `core.port` | The three ports: `SimulationControl` (driving), `LayoutSource`, `SimulationListener` (driven); `Snapshot`, `CommandHandle`, `SimulationStatus` |
+| `core.net` | `NetDefinition` (a layout), `Marking`, `Token`, `NetInterpreter` (firing rules), `Templates` |
+| `core.runtime` | `SimulationManager` (implements the control port), `SimulationEngine`, `EventQueue`, `RealTimeDriver` |
+| `core.fault` | `Faults`, `SensorFault`, `NetFault` |
+| `core.event` | `EventLog`, `SimulationEvent`, `EventType` |
+| `adapter.in.web` | `ControlController` (REST control API), `LayoutHttpApi` + `LayoutHttpFilter` (layouts' own HTTP APIs) |
+| `adapter.out.layout` | `YamlLayoutLoader`, `LayoutYamlParser` |
+| `adapter.out.messaging` | `MqttEventPublisher` |
+| `app` | Spring Boot application and wiring |
 
-The web UI is in `web/` (React, TypeScript, Vite).
-
-Core packages (`api`, `model`, `execution`, `event`, `runtime`) must not import Spring, `app` or `adapters`; `CoreIndependenceTest` checks this. A layout is registered by declaring its `SimulationDefinition` as a Spring bean.
-
-Example layout: `src/test/java/ch/hsg/simulation/testlayout`.
+The core uses no Spring and no adapter; `CoreIndependenceTest` checks this. Layouts: `src/main/resources/layouts/*.yaml`, plus any folder set in `simulation.layouts.dir`. The web UI is in `web/` (React, TypeScript, Vite).
 
 ## Build and run
 
@@ -45,18 +40,15 @@ mvn package
 java -jar target/simulation-platform-0.1.0-SNAPSHOT.jar
 ```
 
-UI and API run on http://localhost:8080. `-Dweb.skip=true` skips the UI build (faster for backend work).
-
-To see the UI driven like by an application, run an example application: [applications](applications/README.md).
+UI and APIs run on http://localhost:8080. `-Dweb.skip=true` skips the UI build (faster for backend work).
 
 With Docker (no Java needed):
 
 ```sh
-docker compose up --build                  # simulator on :8080, MQTT broker on :1883
-docker compose --profile demo up --build   # plus the demo process
+docker compose up --build    # simulator on :8080, MQTT broker on :1883
 ```
 
-The simulator publishes the Fischertechnik factory's status messages (`FTFactory/<STATION>`) to this broker.
+The simulator publishes each layout's messages (e.g. `FTFactory/<STATION>`) to this broker.
 
 UI development with hot reload (backend running on 8080):
 
@@ -64,35 +56,31 @@ UI development with hot reload (backend running on 8080):
 cd web && PATH=$PWD/node:$PATH ./node/npm run dev
 ```
 
-## Web UI
+## Layout APIs
 
-The application (e.g. a Camunda process via the hardware-compatible adapter) drives the simulator. The UI does not send machine commands. It is for watching, preparing and disturbing a run (ADR 0010):
-
-- Floor: positions, machines with progress, sensors, workpieces moving between positions.
-- Story: what happened, with who caused it (application or you).
-- Inspector: state, running task, workpieces and faults of a component.
-- Place and remove workpieces, switch faults, pause, change speed, step, reset.
+Every route a layout declares is served on the simulator with the same path, parameters, responses and errors as on the physical layout, e.g. `GET /ov/burn?machine=ov_1`. Calls go to the most recently started running simulation of that layout, switched to real time if needed. See the layout's interface notes, e.g. [Fischertechnik](docs/layouts/fischertechnik/http-api.md).
 
 ## Control API
 
-For the Web UI and tests. Applications use the layout's hardware-compatible adapter (ADR 0009). Durations are ISO-8601 (`PT4S`).
+For the web UI, tests and setup scripts. Applications use the layout's own API. Durations are ISO-8601 (`PT4S`).
 
 | Method | Path | Body | Result |
 |---|---|---|---|
-| GET | `/simulation-definitions` | | available layouts |
-| POST | `/simulations` | `{"definitionId": "..."}` | 201, `{"id": "..."}` |
-| GET | `/simulations` | | all snapshots |
-| GET | `/simulations/{id}` | | snapshot |
+| GET | `/layouts`, `/layouts/{layoutId}` | | layouts (net, sensors, routes, picture) |
+| POST | `/simulations` | `{"layoutId": "..."}` | 201, `{"id": "..."}` |
+| GET | `/simulations`, `/simulations/{id}` | | snapshots: marking, firings in progress, sensors, faults |
 | DELETE | `/simulations/{id}` | | 204; 409 if running |
 | POST | `/simulations/{id}/start` \| `stop` \| `reset` | | snapshot |
-| POST | `/simulations/{id}/step` | | `{"stepped": true, "time": "PT2S"}` |
+| POST | `/simulations/{id}/step` | | `{"stepped": true, "time": "PT5S"}` |
 | POST | `/simulations/{id}/run-until` | `{"time": "PT10S"}` | snapshot |
-| POST | `/simulations/{id}/components/{componentId}/actions[?await=true&timeout=PT60S]` | `{"capability": "...", "parameters": {...}, "origin": "application"}` | 200 completed, 202 accepted, 422 rejected/failed; with `await`: 200 when finished, 504 on timeout |
-| PUT | `/simulations/{id}/components/{componentId}/faults/{faultId}` | `{"active": true}` | snapshot |
-| POST | `/simulations/{id}/entities` | `{"type": "workpiece", "attributes": {...}, "componentId": "IN"}` | 201, snapshot |
-| DELETE | `/simulations/{id}/entities/{entityId}` | | snapshot |
-| GET | `/simulations/{id}/events?from=0` | | events from index `from` |
-| PUT | `/simulations/{id}/real-time` | `{"speedFactor": 1.0}` | starts the real-time driver |
-| DELETE | `/simulations/{id}/real-time` | | stops it |
+| PUT / DELETE | `/simulations/{id}/speed` | `{"factor": 2.0}` | real time on (at that speed) / off |
+| POST | `/simulations/{id}/tokens` | `{"place": "oven", "attributes": {"color": "red"}}` | 201, `{"id": "token-1"}` |
+| DELETE | `/simulations/{id}/tokens/{tokenId}` | | snapshot |
+| PUT / DELETE | `/simulations/{id}/faults/sensors/{sensor}` | `{"type": "STUCK"}` (`DROPOUT`, `DELAYED` + `delay`, `WRONG_VALUE` + `value`) | snapshot |
+| PUT / DELETE | `/simulations/{id}/faults/transitions/{transition}` | `{"type": "BLOCKED"}` (`DELAYED` + `factor`, `TOKEN_LOSS`, `MISROUTE` + `place`) | snapshot |
+| PUT | `/simulations/{id}/modules` | `{"modules": ["ov"]}` (empty = all) | snapshot |
+| POST | `/simulations/{id}/commands` | `{"place": "cmd_ov_burn", "parameters": {...}, "returnsAfter": ["ov_burn"], "await": true}` | request token put directly into the net, to try it out |
+| GET | `/simulations/{id}/sensors` | | sensor values as applications read them |
+| GET | `/simulations/{id}/events?from=0` | | trace from index `from` |
 
-Errors: 404 unknown definition/simulation/component/fault, 409 wrong lifecycle state, 400 invalid request.
+Errors: 404 unknown layout/simulation/place/transition/sensor/token, 409 wrong lifecycle state, 400 invalid request.

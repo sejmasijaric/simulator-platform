@@ -1,143 +1,144 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1160" viewBox="0 0 1900 1160" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1160" viewBox="0 0 1900 1160" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" xmlns:c2pa="http://c2pa.org/manifest">
 <defs>
 <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
 <marker id="ahE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker>
 </defs>
 <rect width="1900" height="1160" fill="#ffffff"/>
-<text x="40.0" y="58.0" font-size="28" font-weight="bold" fill="#0f172a" text-anchor="start" >Simulation Platform — Hexagonal Architecture</text>
-<text x="40.0" y="86.0" font-size="15" font-weight="normal" fill="#475569" text-anchor="start" >Ports &amp; adapters view of ch.hsg.simulation · solid = implemented, dashed = planned</text>
+<text x="40" y="58" font-size="28" font-weight="bold" fill="#0f172a" text-anchor="start">Simulation Platform — Hexagonal Architecture (Petri net layouts)</text>
+<text x="40" y="86" font-size="15" font-weight="normal" fill="#475569" text-anchor="start">Ports &amp; adapters view of ch.hsg.simulation · layouts are data (YAML), not code · ports are Java interfaces · solid = kept, dashed = new or changed</text>
 <polygon points="1490.0,600.0 1220.0,1067.7 680.0,1067.7 410.0,600.0 680.0,132.3 1220.0,132.3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
 <polygon points="1240.0,600.0 1095.0,851.1 805.0,851.1 660.0,600.0 805.0,348.9 1095.0,348.9" fill="#fffbeb" stroke="#b45309" stroke-width="2"/>
-<text x="686.0" y="120.3" font-size="12" font-weight="bold" fill="#64748b" text-anchor="start" letter-spacing="2">ADAPTERS</text>
-<line x1="660.0" y1="600.0" x2="805.0" y2="348.9" stroke="#2563eb" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
-<line x1="805.0" y1="851.1" x2="660.0" y2="600.0" stroke="#2563eb" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
-<line x1="1095.0" y1="348.9" x2="1240.0" y2="600.0" stroke="#059669" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
-<line x1="1240.0" y1="600.0" x2="1095.0" y2="851.1" stroke="#059669" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
-<line x1="1095.0" y1="851.1" x2="805.0" y2="851.1" stroke="#7c3aed" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
-<line x1="805.0" y1="348.9" x2="1095.0" y2="348.9" stroke="#94a3b8" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
-<text x="751.6" y="489.4" font-size="12" font-weight="bold" fill="#2563eb" text-anchor="middle" transform="rotate(-60.0 751.6 485.4)" letter-spacing="1">CONTROL PORT</text>
-<text x="764.5" y="496.9" font-size="11" font-weight="normal" fill="#2563eb" text-anchor="middle" transform="rotate(-60.0 764.5 492.9)">SimulationManager</text>
-<text x="751.6" y="718.6" font-size="12" font-weight="bold" fill="#2563eb" text-anchor="middle" transform="rotate(60.0 751.6 714.6)" letter-spacing="1">create · start · execute</text>
-<text x="764.5" y="711.1" font-size="11" font-weight="normal" fill="#2563eb" text-anchor="middle" transform="rotate(60.0 764.5 707.1)">setFault · reset · snapshot</text>
-<text x="1148.4" y="489.4" font-size="12" font-weight="bold" fill="#059669" text-anchor="middle" transform="rotate(60.0 1148.4 485.4)" letter-spacing="1">LAYOUT SPI  (api)</text>
-<text x="1135.5" y="496.9" font-size="11" font-weight="normal" fill="#059669" text-anchor="middle" transform="rotate(60.0 1135.5 492.9)">SimulationDefinition · Component</text>
-<text x="1148.4" y="718.6" font-size="12" font-weight="bold" fill="#059669" text-anchor="middle" transform="rotate(-60.0 1148.4 714.6)" letter-spacing="1">Capability · FaultMode</text>
-<text x="1135.5" y="711.1" font-size="11" font-weight="normal" fill="#059669" text-anchor="middle" transform="rotate(-60.0 1135.5 707.1)">SimulationContext (read view)</text>
-<text x="950.0" y="833.1" font-size="12" font-weight="bold" fill="#7c3aed" text-anchor="middle" transform="rotate(0.0 950.0 829.1)" letter-spacing="1">EVENT PORT</text>
-<text x="950.0" y="818.1" font-size="11" font-weight="normal" fill="#7c3aed" text-anchor="middle" transform="rotate(0.0 950.0 814.1)">EventLog listeners · snapshot()</text>
-<text x="950.0" y="430.0" font-size="17" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="2">SIMULATION CORE</text>
-<text x="950.0" y="449.0" font-size="11" font-weight="normal" fill="#78350f" text-anchor="middle" >framework-free · no Spring imports</text>
-<rect x="805.0" y="464.0" width="290.0" height="58.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2"/>
-<text x="950.0" y="481.0" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">RUNTIME</text>
-<text x="950.0" y="497.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >SimulationManager → SimulationEngine</text>
-<text x="950.0" y="515.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >one serialized engine per simulation</text>
-<rect x="805.0" y="532.0" width="290.0" height="58.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2"/>
-<text x="950.0" y="549.0" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">RUNTIME</text>
-<text x="950.0" y="565.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >SimulationClock · EventQueue</text>
-<text x="950.0" y="583.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >logical time · RealTimeDriver</text>
-<rect x="805.0" y="600.0" width="290.0" height="58.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2"/>
-<text x="950.0" y="617.0" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">MODEL</text>
-<text x="950.0" y="633.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Simulation · Entity · ComponentState</text>
-<text x="950.0" y="651.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >source of truth · snapshots</text>
-<rect x="805.0" y="668.0" width="290.0" height="58.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2"/>
-<text x="950.0" y="685.0" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">EXECUTION</text>
-<text x="950.0" y="701.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >ComponentAction · StateChange</text>
-<text x="950.0" y="719.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >timed phases · atomic commit</text>
-<rect x="805.0" y="736.0" width="290.0" height="58.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2"/>
-<text x="950.0" y="753.0" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">EVENT</text>
-<text x="950.0" y="769.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >EventLog · SimulationEvent</text>
-<text x="950.0" y="787.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >trace with sim time + command id</text>
-<rect x="720.0" y="190.0" width="460.0" height="92.0" rx="10" fill="#f8fafc" stroke="#475569" stroke-width="2"/>
-<text x="950.0" y="216.0" font-size="10.5" font-weight="bold" fill="#475569" text-anchor="middle" letter-spacing="1">COMPOSITION ROOT</text>
-<text x="950.0" y="232.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Spring Boot app  (app)</text>
-<text x="950.0" y="250.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >SimulationApplication · SimulationConfiguration</text>
-<text x="950.0" y="266.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >wires the core · layouts registered as SimulationDefinition beans</text>
+<text x="686" y="120.3" font-size="12" font-weight="bold" fill="#64748b" text-anchor="start" letter-spacing="2">ADAPTERS</text>
+<line x1="660" y1="600" x2="805" y2="348.9" stroke="#2563eb" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
+<line x1="805" y1="851.1" x2="660" y2="600" stroke="#2563eb" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
+<line x1="1095" y1="348.9" x2="1240" y2="600" stroke="#059669" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
+<line x1="1240" y1="600" x2="1095" y2="851.1" stroke="#059669" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
+<line x1="1095" y1="851.1" x2="805" y2="851.1" stroke="#7c3aed" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
+<line x1="805" y1="348.9" x2="1095" y2="348.9" stroke="#94a3b8" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
+<text x="751.6" y="489.4" font-size="12" font-weight="bold" fill="#2563eb" text-anchor="middle" letter-spacing="1" transform="rotate(-60.0 751.6 485.4)">CONTROL PORT</text>
+<text x="764.5" y="496.9" font-size="11" font-weight="normal" fill="#2563eb" text-anchor="middle" transform="rotate(-60.0 764.5 492.9)">interface SimulationControl</text>
+<text x="751.6" y="718.6" font-size="12" font-weight="bold" fill="#2563eb" text-anchor="middle" letter-spacing="1" transform="rotate(60.0 751.6 714.6)">command · query · faults</text>
+<text x="764.5" y="711.1" font-size="11" font-weight="normal" fill="#2563eb" text-anchor="middle" transform="rotate(60.0 764.5 707.1)">impl. SimulationManager</text>
+<text x="1148.4" y="489.4" font-size="12" font-weight="bold" fill="#059669" text-anchor="middle" letter-spacing="1" transform="rotate(60.0 1148.4 485.4)">LAYOUT PORT</text>
+<text x="1135.5" y="496.9" font-size="11" font-weight="normal" fill="#059669" text-anchor="middle" transform="rotate(60.0 1135.5 492.9)">interface LayoutSource</text>
+<text x="1148.4" y="718.6" font-size="12" font-weight="bold" fill="#059669" text-anchor="middle" letter-spacing="1" transform="rotate(-60.0 1148.4 714.6)">load() → NetDefinition</text>
+<text x="1135.5" y="711.1" font-size="11" font-weight="normal" fill="#059669" text-anchor="middle" transform="rotate(-60.0 1135.5 707.1)">+ LayoutHook (optional)</text>
+<text x="950" y="840.1" font-size="12" font-weight="bold" fill="#7c3aed" text-anchor="middle" letter-spacing="1">EVENT PORT</text>
+<text x="950" y="826.1" font-size="11" font-weight="normal" fill="#7c3aed" text-anchor="middle">interface SimulationListener · onEvent</text>
+<text x="950" y="412" font-size="17" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="2">SIMULATION CORE</text>
+<text x="950" y="430" font-size="11" font-weight="normal" fill="#78350f" text-anchor="middle">framework-free · same engine for every layout</text>
+<rect x="805.0" y="442" width="290.0" height="56.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="950" y="458" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">RUNTIME</text>
+<text x="950" y="474" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">SimulationManager → SimulationEngine</text>
+<text x="950" y="490" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">one engine per simulation · clock inside</text>
+<rect x="805.0" y="504" width="290.0" height="56.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="950" y="520" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">TIME</text>
+<text x="950" y="536" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">EventQueue · RealTimeDriver</text>
+<text x="950" y="552" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">timed firings · speed, pause, step</text>
+<rect x="805.0" y="566" width="290.0" height="56.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="950" y="582" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">MODEL</text>
+<text x="950" y="598" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">NetDefinition · Marking · Token</text>
+<text x="950" y="614" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">resource and command places, coloured tokens</text>
+<rect x="805.0" y="628" width="290.0" height="56.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="950" y="644" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">EXECUTION</text>
+<text x="950" y="660" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">NetInterpreter</text>
+<text x="950" y="676" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">fires on command tokens or when enabled</text>
+<rect x="805.0" y="690" width="290.0" height="56.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="950" y="706" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">FAULTS</text>
+<text x="950" y="722" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">Faults</text>
+<text x="950" y="738" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">in readSensors() · token loss, block, misroute</text>
+<rect x="805.0" y="752" width="290.0" height="56.0" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="2"/>
+<text x="950" y="768" font-size="10.5" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">EVENT</text>
+<text x="950" y="784" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">EventLog · SimulationEvent</text>
+<text x="950" y="800" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">commands and firings, with command id</text>
+<rect x="720.0" y="190.0" width="460.0" height="92.0" rx="10" fill="#f8fafc" stroke="#475569" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="950" y="216" font-size="10.5" font-weight="bold" fill="#475569" text-anchor="middle" letter-spacing="1">COMPOSITION ROOT</text>
+<text x="950" y="232" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">Spring Boot app  (app)</text>
+<text x="950" y="250" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">app: SimulationApplication · SimulationConfiguration</text>
+<text x="950" y="266" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">creates SimulationManager · wires ports to adapters</text>
 <line x1="950.0" y1="282.0" x2="950.0" y2="342.9" stroke="#475569" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="976.0" y="322.0" font-size="11" font-weight="normal" fill="#475569" text-anchor="middle" >wires</text>
-<rect x="569.0" y="342.0" width="152.6" height="96.0" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
-<text x="645.2" y="370.0" font-size="10.5" font-weight="bold" fill="#2563eb" text-anchor="middle" letter-spacing="1">DRIVING ADAPTER</text>
-<text x="645.2" y="386.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >REST control API</text>
-<text x="645.2" y="404.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >adapters.rest</text>
-<text x="645.2" y="420.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >SimulationController · DTOs</text>
-<line x1="721.5" y1="390.0" x2="774.2" y2="390.0" stroke="#2563eb" stroke-width="1.8" marker-end="url(#ah)"/>
-<rect x="447.7" y="552.0" width="180.3" height="96.0" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
-<text x="537.9" y="580.0" font-size="10.5" font-weight="bold" fill="#2563eb" text-anchor="middle" letter-spacing="1">DRIVING ADAPTER</text>
-<text x="537.9" y="596.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >RealTimeService</text>
-<text x="537.9" y="614.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >app · one RealTimeDriver</text>
-<text x="537.9" y="630.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >per simulation (wall clock)</text>
-<line x1="628.0" y1="600.0" x2="653.0" y2="600.0" stroke="#2563eb" stroke-width="1.8" marker-end="url(#ah)"/>
-<rect x="569.0" y="762.0" width="152.6" height="96.0" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2" stroke-dasharray="7 5"/>
-<text x="645.2" y="790.0" font-size="10.5" font-weight="bold" fill="#2563eb" text-anchor="middle" letter-spacing="1">DRIVING ADAPTER</text>
-<text x="645.2" y="806.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Hardware adapter</text>
-<text x="645.2" y="824.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >per layout (ADR 0009)</text>
-<text x="645.2" y="840.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >lab HTTP / MQTT interface</text>
-<line x1="721.5" y1="810.0" x2="774.2" y2="810.0" stroke="#2563eb" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<rect x="1178.5" y="342.0" width="152.6" height="96.0" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
-<text x="1254.8" y="362.0" font-size="10.5" font-weight="bold" fill="#059669" text-anchor="middle" letter-spacing="1">DRIVEN ADAPTER</text>
-<text x="1254.8" y="378.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Demo layout</text>
-<text x="1254.8" y="396.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >systems.demo</text>
-<text x="1254.8" y="412.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >Slot · Transporter</text>
-<text x="1254.8" y="428.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >Conveyor · LightBarrier</text>
-<line x1="1178.5" y1="390.0" x2="1125.8" y2="390.0" stroke="#059669" stroke-width="1.8" marker-end="url(#ah)"/>
-<rect x="1272.0" y="552.0" width="180.3" height="96.0" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2" stroke-dasharray="7 5"/>
-<text x="1362.1" y="588.0" font-size="10.5" font-weight="bold" fill="#059669" text-anchor="middle" letter-spacing="1">DRIVEN ADAPTER</text>
-<text x="1362.1" y="604.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Fischertechnik</text>
-<text x="1362.1" y="622.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >Factory 4.0 layout</text>
-<line x1="1272.0" y1="600.0" x2="1247.0" y2="600.0" stroke="#059669" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<rect x="1178.5" y="762.0" width="152.6" height="96.0" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2" stroke-dasharray="7 5"/>
-<text x="1254.8" y="798.0" font-size="10.5" font-weight="bold" fill="#059669" text-anchor="middle" letter-spacing="1">DRIVEN ADAPTER</text>
-<text x="1254.8" y="814.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Dobot + conveyor</text>
-<text x="1254.8" y="832.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >layout</text>
-<line x1="1178.5" y1="810.0" x2="1125.8" y2="810.0" stroke="#059669" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="976" y="322" font-size="11" font-weight="normal" fill="#475569" text-anchor="middle">wires</text>
+<rect x="569" y="342" width="152.6" height="96" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+<text x="645.3" y="373.0" font-size="10.5" font-weight="bold" fill="#2563eb" text-anchor="middle" letter-spacing="1">DRIVING ADAPTER</text>
+<text x="645.3" y="389.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">REST control API</text>
+<text x="645.3" y="407.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">adapter.in.web</text>
+<text x="645.3" y="423.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">ControlController</text>
+<line x1="721.5" y1="390" x2="774.2" y2="390" stroke="#2563eb" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="545" y="762" width="200" height="96" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="645.0" y="793.0" font-size="10.5" font-weight="bold" fill="#2563eb" text-anchor="middle" letter-spacing="1">DRIVING ADAPTER</text>
+<text x="645.0" y="809.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">Layout HTTP adapter</text>
+<text x="645.0" y="827.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">LayoutHttpFilter + LayoutHttpApi</text>
+<text x="645.0" y="843.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">routes from each layout YAML</text>
+<line x1="745" y1="810" x2="774.2" y2="810" stroke="#2563eb" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
 <path d="M 890.0 859.1 C 810.0 911.1, 761.5 908.0, 691.5 862.0" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ahE)"/>
-<text x="800.0" y="917.1" font-size="11" font-weight="normal" fill="#7c3aed" text-anchor="middle" >events after commit</text>
-<rect x="40.0" y="300.0" width="250.0" height="78.0" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2"/>
-<text x="165.0" y="319.0" font-size="10.5" font-weight="bold" fill="#334155" text-anchor="middle" letter-spacing="1">EXTERNAL</text>
-<text x="165.0" y="335.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Web UI</text>
-<text x="165.0" y="353.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >React · TypeScript · Vite (web/)</text>
-<text x="165.0" y="369.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >observes, prepares, disturbs</text>
-<rect x="40.0" y="420.0" width="250.0" height="70.0" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2"/>
-<text x="165.0" y="443.0" font-size="10.5" font-weight="bold" fill="#334155" text-anchor="middle" letter-spacing="1">EXTERNAL</text>
-<text x="165.0" y="459.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Demo process</text>
-<text x="165.0" y="477.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >applications/demo/demo_process.py</text>
-<rect x="40.0" y="780.0" width="250.0" height="78.0" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2" stroke-dasharray="7 5"/>
-<text x="165.0" y="807.0" font-size="10.5" font-weight="bold" fill="#334155" text-anchor="middle" letter-spacing="1">EXTERNAL</text>
-<text x="165.0" y="823.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Application</text>
-<text x="165.0" y="841.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >e.g. Camunda BPMN process</text>
-<rect x="40.0" y="930.0" width="250.0" height="70.0" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2"/>
-<text x="165.0" y="953.0" font-size="10.5" font-weight="bold" fill="#334155" text-anchor="middle" letter-spacing="1">HARDWARE</text>
-<text x="165.0" y="969.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >Physical lab layout</text>
-<text x="165.0" y="987.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >Fischertechnik · Dobot</text>
-<rect x="40.0" y="1040.0" width="250.0" height="64.0" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2" stroke-dasharray="7 5"/>
-<text x="165.0" y="1060.0" font-size="10.5" font-weight="bold" fill="#334155" text-anchor="middle" letter-spacing="1">INFRASTRUCTURE</text>
-<text x="165.0" y="1076.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle" >MQTT broker</text>
-<text x="165.0" y="1094.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" >Mosquitto (docker-compose)</text>
-<line x1="290.0" y1="339.0" x2="565.0" y2="372.0" stroke="#334155" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="437.5" y="347.5" font-size="11" font-weight="normal" fill="#475569" text-anchor="middle" >HTTP / JSON (control)</text>
-<line x1="290.0" y1="455.0" x2="565.0" y2="414.0" stroke="#334155" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="419.5" y="424.5" font-size="11" font-weight="normal" fill="#475569" text-anchor="middle" >HTTP (origin = application)</text>
-<line x1="290.0" y1="819.0" x2="565.0" y2="810.0" stroke="#334155" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="429.5" y="806.5" font-size="11" font-weight="normal" fill="#475569" text-anchor="middle" >layout's own interface</text>
-<line x1="165.0" y1="858.0" x2="165.0" y2="926.0" stroke="#334155" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="175.0" y="897.0" font-size="11" font-weight="normal" fill="#475569" text-anchor="start" >same interface, switch by config</text>
-<line x1="290.0" y1="1072.0" x2="599.0" y2="862.0" stroke="#334155" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="360.0" y="1060.0" font-size="11" font-weight="normal" fill="#475569" text-anchor="middle" >topics</text>
+<text x="800" y="917.1" font-size="11" font-weight="normal" fill="#7c3aed" text-anchor="middle">returns_after transition fired → reply</text>
+<rect x="1178.5" y="342" width="152.6" height="96" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="1254.8" y="373.0" font-size="10.5" font-weight="bold" fill="#059669" text-anchor="middle" letter-spacing="1">DRIVEN ADAPTER</text>
+<text x="1254.8" y="389.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">YamlLayoutLoader</text>
+<text x="1254.8" y="407.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">implements LayoutSource</text>
+<text x="1254.8" y="423.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">validates every layout</text>
+<line x1="1178.5" y1="390" x2="1125.8" y2="390" stroke="#059669" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<rect x="1272" y="552" width="180.3" height="96" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="1362.15" y="583.0" font-size="10.5" font-weight="bold" fill="#059669" text-anchor="middle" letter-spacing="1">DRIVEN ADAPTER</text>
+<text x="1362.15" y="599.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">Layout hooks</text>
+<text x="1362.15" y="617.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">optional, for interface quirks</text>
+<text x="1362.15" y="633.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">none needed so far</text>
+<line x1="1272" y1="600" x2="1247" y2="600" stroke="#059669" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<rect x="1165" y="762" width="180" height="96" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="1255.0" y="793.0" font-size="10.5" font-weight="bold" fill="#7c3aed" text-anchor="middle" letter-spacing="1">DRIVEN ADAPTER</text>
+<text x="1255.0" y="809.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">MqttEventPublisher</text>
+<text x="1255.0" y="827.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">full state on every tick</text>
+<text x="1255.0" y="843.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">messages from each YAML</text>
+<path d="M 1010.0 859.1 C 1090.0 911.1, 1138.5 908.0, 1208.5 862.0" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ahE)"/>
+<text x="1100" y="917.1" font-size="11" font-weight="normal" fill="#7c3aed" text-anchor="middle">readSensors() on each tick</text>
+<rect x="40" y="300" width="250" height="78" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+<text x="165.0" y="322.0" font-size="10.5" font-weight="bold" fill="#334155" text-anchor="middle" letter-spacing="1">EXTERNAL</text>
+<text x="165.0" y="338.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">Web UI</text>
+<text x="165.0" y="356.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">React · TypeScript · Vite (web/)</text>
+<text x="165.0" y="372.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">observes, prepares, injects faults</text>
+<rect x="40" y="780" width="250" height="78" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+<text x="165.0" y="810.0" font-size="10.5" font-weight="bold" fill="#334155" text-anchor="middle" letter-spacing="1">EXTERNAL</text>
+<text x="165.0" y="826.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">Application</text>
+<text x="165.0" y="844.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">Camunda process, lab_process.py</text>
+<rect x="40" y="930" width="250" height="70" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+<text x="165.0" y="956.0" font-size="10.5" font-weight="bold" fill="#334155" text-anchor="middle" letter-spacing="1">HARDWARE</text>
+<text x="165.0" y="972.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">Physical lab layout</text>
+<text x="165.0" y="990.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">Fischertechnik · Dobot</text>
+<line x1="290" y1="339" x2="565" y2="372" stroke="#334155" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="437.5" y="347.5" font-size="11" font-weight="normal" fill="#475569" text-anchor="middle">HTTP / JSON (setup, faults, speed)</text>
+<line x1="290" y1="819" x2="541" y2="810" stroke="#334155" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="420.5" y="806.5" font-size="11" font-weight="normal" fill="#475569" text-anchor="middle">layout's own HTTP API</text>
+<line x1="165" y1="858" x2="165" y2="926" stroke="#334155" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="175" y="897" font-size="11" font-weight="normal" fill="#475569" text-anchor="start">same interface, switch by config</text>
+<rect x="1600" y="360" width="270" height="92" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="1735.0" y="389.0" font-size="10.5" font-weight="bold" fill="#334155" text-anchor="middle" letter-spacing="1">LAYOUT FILES</text>
+<text x="1735.0" y="405.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">layouts/*.yaml</text>
+<text x="1735.0" y="423.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">fischertechnik (dobot next)</text>
+<text x="1735.0" y="439.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">net · sensors · interface · image</text>
+<line x1="1600" y1="400" x2="1335" y2="392" stroke="#334155" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1468" y="386" font-size="11" font-weight="normal" fill="#475569" text-anchor="middle">reads</text>
+<rect x="1600" y="776" width="270" height="78" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+<text x="1735.0" y="798.0" font-size="10.5" font-weight="bold" fill="#334155" text-anchor="middle" letter-spacing="1">INFRASTRUCTURE</text>
+<text x="1735.0" y="814.0" font-size="14" font-weight="bold" fill="#0f172a" text-anchor="middle">MQTT broker</text>
+<text x="1735.0" y="832.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">Mosquitto (docker-compose)</text>
+<text x="1735.0" y="848.0" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle">subscribed to by applications</text>
+<line x1="1345" y1="810" x2="1596" y2="812" stroke="#334155" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1470" y="802" font-size="11" font-weight="normal" fill="#475569" text-anchor="middle">FTFactory/… topics</text>
 <rect x="1560" y="128" width="310" height="196" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
-<text x="1576.0" y="154.0" font-size="12" font-weight="bold" fill="#64748b" text-anchor="start" letter-spacing="2">LEGEND</text>
+<text x="1576" y="154" font-size="12" font-weight="bold" fill="#64748b" text-anchor="start" letter-spacing="2">LEGEND</text>
 <rect x="1576" y="172" width="30" height="18" rx="4" fill="#fffbeb" stroke="#b45309" stroke-width="2"/>
-<text x="1618.0" y="186.0" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start" >Core (domain + use cases)</text>
+<text x="1618" y="186" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start">Core (domain + use cases)</text>
 <rect x="1576" y="200" width="30" height="18" rx="4" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
-<text x="1618.0" y="214.0" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start" >Driving adapter (calls the core)</text>
+<text x="1618" y="214" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start">Driving adapter (calls the core)</text>
 <rect x="1576" y="228" width="30" height="18" rx="4" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
-<text x="1618.0" y="242.0" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start" >Driven adapter (implements SPI)</text>
+<text x="1618" y="242" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start">Driven adapter (implements a port)</text>
 <rect x="1576" y="256" width="30" height="18" rx="4" fill="#ffffff" stroke="#475569" stroke-width="2" stroke-dasharray="5 4"/>
-<text x="1618.0" y="270.0" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start" >Planned (ADR 0009)</text>
+<text x="1618" y="270" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start">New or changed (Petri net concept)</text>
 <line x1="1576" y1="292" x2="1604" y2="292" stroke="#2563eb" stroke-width="8" stroke-linecap="round"/>
-<text x="1612.0" y="296.0" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start" >control</text>
+<text x="1612" y="296" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start">control</text>
 <line x1="1672" y1="292" x2="1700" y2="292" stroke="#059669" stroke-width="8" stroke-linecap="round"/>
-<text x="1708.0" y="296.0" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start" >SPI</text>
+<text x="1708" y="296" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start">layout</text>
 <line x1="1768" y1="292" x2="1796" y2="292" stroke="#7c3aed" stroke-width="8" stroke-linecap="round"/>
-<text x="1804.0" y="296.0" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start" >events</text>
-<text x="1576.0" y="292.0" font-size="1" font-weight="normal" fill="#0f172a" text-anchor="start" ></text>
-<text x="1576.0" y="344.0" font-size="11.5" font-weight="normal" fill="#64748b" text-anchor="start" >Port = coloured edge of the core</text>
-</svg>
+<text x="1804" y="296" font-size="12.5" font-weight="normal" fill="#0f172a" text-anchor="start">events</text>
+<text x="1576" y="344" font-size="11.5" font-weight="normal" fill="#64748b" text-anchor="start">Port = coloured edge = Java interface</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTo3YjdlOGNlNS03MDI0LTRiNWMtOTY5MS1hYjA2NzZiZThjNTUAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaAl2gmKDzKHvItb/XtQ/Tw0AAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDo4NThlOTYzZC0wMzA5LTQzOGQtOTFiNy1mMmNhODQ3NjUzNTRscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNommjIrmzC4kDqOwlxlotcLQAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggW80JTYnpEBkZfhoa7xzDRK60idxxolEfI8DLOYgHOqekZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaOdxj92ZEW5urj5qQtLRU48AAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIHuLMwQwWtwAxjsQ69rpb+bV7ufKSp2/97exXjGyIvgeZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GUi1Zmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjdiN2U4Y2U1LTcwMjQtNGI1Yy05NjkxLWFiMDY3NmJlOGM1NS9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOmYxMzk3MDk1LTAxZWEtNDg1OC05Y2ZmLTE5YWZkMGYzMDVjN3JjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCBbzQlNiekQGRl+GhrvHMNErrSJ3HGiUR8jwMs5iAc6p6JjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFgg5mEpLPm/nFP7Z5/7PjtAOWAajCMjRZaMTHgCh1HTyzmiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggc05Xq9VBxSKYSYOoD07QTeM872h/0L1vEkgjLrE77np0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQNp2rEwtMfF7ZSdnrAGDy+/5SpZLPDhaFgS6YuhastvMHIMlVDeJh/NlTK/BgiHhN+f1DKalHseitTSvyBBaLQs=</c2pa:manifest></metadata></svg>

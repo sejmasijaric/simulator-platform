@@ -19,6 +19,7 @@ import ch.hsg.simulation.core.port.Snapshot;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -56,7 +57,7 @@ public final class SimulationEngine implements AutoCloseable {
     private record InProgress(Firing firing, Duration started) {
     }
 
-    private record PendingCommand(String returnsAfter, CompletableFuture<SimulationEvent> completion) {
+    private record PendingCommand(Set<String> returnsAfter, CompletableFuture<SimulationEvent> completion) {
     }
 
     private final UUID id;
@@ -149,12 +150,25 @@ public final class SimulationEngine implements AutoCloseable {
 
     // ---- the layout's own interface ----
 
+    /** Convenience for a request that ends with one transition (or, with null, at once). */
     public CommandHandle command(String commandPlace, Map<String, ?> parameters, String returnsAfter, String origin) {
+        return command(commandPlace, parameters, returnsAfter == null ? List.of() : List.of(returnsAfter), origin);
+    }
+
+    /**
+     * Puts a request token into {@code commandPlace}. The handle completes when any of
+     * {@code returnsAfter} fires for this request; with none it is complete at once.
+     */
+    public CommandHandle command(String commandPlace, Map<String, ?> parameters, Collection<String> returnsAfter,
+                                 String origin) {
+        Set<String> endings = returnsAfter == null ? Set.of() : Set.copyOf(returnsAfter);
         return call(() -> {
             requireRunning();
             requirePlace(commandPlace);
-            if (returnsAfter != null && net.transition(returnsAfter).isEmpty()) {
-                throw new NotFoundException("Unknown transition: " + returnsAfter);
+            for (String transition : endings) {
+                if (net.transition(transition).isEmpty()) {
+                    throw new NotFoundException("Unknown transition: " + transition);
+                }
             }
             UUID commandId = UUID.randomUUID();
             String by = origin == null ? ORIGIN_APPLICATION : origin;
@@ -164,13 +178,13 @@ public final class SimulationEngine implements AutoCloseable {
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("token", request.id());
             data.put("parameters", request.attributes());
-            data.put("returnsAfter", returnsAfter);
+            data.put("returnsAfter", List.copyOf(endings));
             SimulationEvent received = append(EventType.COMMAND_RECEIVED, commandPlace, commandId, by, data);
             CompletableFuture<SimulationEvent> completion = new CompletableFuture<>();
-            if (returnsAfter == null) {
+            if (endings.isEmpty()) {
                 completion.complete(received);
             } else {
-                pending.put(commandId, new PendingCommand(returnsAfter, completion));
+                pending.put(commandId, new PendingCommand(endings, completion));
             }
             fireEnabled();
             return new CommandHandle(commandId, completion);
@@ -393,8 +407,12 @@ public final class SimulationEngine implements AutoCloseable {
             append(EventType.TOKEN_LOST, token.id(), firing.commandId(), origin,
                     Map.of("transition", firing.transition().name()));
         }
-        append(EventType.TRANSITION_COMPLETED, firing.transition().name(), firing.commandId(), origin,
-                Map.of("produced", put));
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("produced", put);
+        if (!firing.result().isEmpty()) {
+            data.put("result", firing.result());
+        }
+        append(EventType.TRANSITION_COMPLETED, firing.transition().name(), firing.commandId(), origin, data);
         completeCommand(firing, origin);
         recordDelayedSensors();
     }
@@ -404,10 +422,10 @@ public final class SimulationEngine implements AutoCloseable {
             return;
         }
         PendingCommand command = pending.get(firing.commandId());
-        if (command != null && command.returnsAfter().equals(firing.transition().name())) {
+        if (command != null && command.returnsAfter().contains(firing.transition().name())) {
             pending.remove(firing.commandId());
             SimulationEvent completed = append(EventType.COMMAND_COMPLETED, firing.transition().name(),
-                    firing.commandId(), origin, Map.of());
+                    firing.commandId(), origin, Map.of("result", firing.result()));
             command.completion().complete(completed);
         }
     }
