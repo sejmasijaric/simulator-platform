@@ -10,10 +10,10 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** ADR 0001: core packages use no framework, no adapter and no layout. */
+/** The core uses no framework and no adapter; adapters reach it only through its ports. */
 class CoreIndependenceTest {
 
-    private static final List<String> CORE = List.of("api", "model", "execution", "event", "runtime");
+    private static final List<String> CORE = List.of("core");
 
     @Test
     void corePackagesDoNotImportSpringOrAdapters() throws IOException {
