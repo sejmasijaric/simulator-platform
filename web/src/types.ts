@@ -1,76 +1,123 @@
-export type Status = 'CREATED' | 'RUNNING' | 'STOPPED' | 'FAILED';
+// Shapes of the control API (ControlController), as Jackson writes them. Durations are ISO-8601 ("PT5S").
+
+export type Status = 'CREATED' | 'RUNNING' | 'STOPPED';
 
 export interface Point { x: number; y: number }
 
-export interface LayoutView {
-  width: number;
-  height: number;
-  backgroundImage: string | null;
-  positions: Record<string, Point>;
+export interface Arc { place: string; variable: string | null }
+
+export interface Place { name: string; capacity: number; initial: number; module: string | null }
+
+export interface Transition {
+  name: string;
+  inputs: Arc[];
+  outputs: Arc[];
+  duration: string;
+  durationParameter: string | null;
+  durationPerUnit: string | null;
+  guard: Record<string, string>;
+  inhibitors: string[];
+  result: Record<string, string>;
+  priority: number;
+  module: string | null;
 }
 
-export interface EntityTemplate {
-  label: string;
-  type: string;
-  attributes: Record<string, unknown>;
+export type SensorKind = 'OCCUPIED' | 'COUNT' | 'ATTRIBUTE';
+
+export interface Sensor {
+  name: string;
+  kind: SensorKind;
+  place: string;
+  attribute: string | null;
+  values: Record<string, unknown>;
 }
 
-export interface Definition {
+export interface Parameter {
+  name: string;
+  required: boolean;
+  values: string[];
+  defaultValue: string | null;
+  integer: boolean;
+}
+
+export interface Route {
+  name: string;
+  kind: 'COMMAND' | 'QUERY';
+  method: string;
+  path: string;
+  parameters: Parameter[];
+  command: string | null;
+  returnsAfter: string[];
+  timeout: string | null;
+  reads: string | null;
+  body: string | null;
+}
+
+export interface EventTopic { protocol: string; topic: string; every: string | null; payload: string }
+
+export interface Image { url: string; width: number; height: number; positions: Record<string, Point> }
+
+export interface TokenTemplate { name: string; attributes: Record<string, unknown> }
+
+export interface NetDefinition {
   id: string;
   name: string;
   description: string;
-  layoutView: LayoutView | null;
-  entityTemplates: EntityTemplate[];
+  places: Place[];
+  transitions: Transition[];
+  sensors: Sensor[];
+  http: { envelope: string | null; routes: Route[] };
+  events: EventTopic[];
+  image: Image | null;
+  tokenTemplates: TokenTemplate[];
 }
 
-export interface FaultMode { id: string; description: string }
+export interface Token { id: string; attributes: Record<string, unknown>; commandId: string | null }
 
-export interface Activity {
-  commandId: string;
-  capability: string;
-  parameters: Record<string, unknown>;
-  origin: string;
-  startedAt: string;
-  endsAt: string;
+export interface RunningFiring {
+  transition: string;
+  tokens: Token[];
+  commandId: string | null;
+  started: string;
+  ends: string;
 }
 
-export interface ComponentView {
-  id: string;
-  type: string;
-  state: { attributes: Record<string, unknown> };
-  capabilities: string[];
-  capacity: number | null;
-  faultModes: FaultMode[];
-  activeFaults: string[];
-  activities: Activity[];
-}
+export type SensorFaultType = 'STUCK' | 'DROPOUT' | 'DELAYED' | 'WRONG_VALUE';
+export type NetFaultType = 'BLOCKED' | 'DELAYED' | 'TOKEN_LOSS' | 'MISROUTE';
 
-export interface EntityView {
-  id: string;
-  type: string;
-  attributes: Record<string, unknown>;
-  locationComponentId: string | null;
-}
+export interface SensorFault { type: SensorFaultType; value: unknown; delay: string | null }
+export interface NetFault { type: NetFaultType; factor: number; place: string | null }
 
 export interface Snapshot {
   id: string;
-  definitionId: string;
-  name: string;
+  layoutId: string;
   status: Status;
   time: string;
-  components: ComponentView[];
-  connections: { from: string; to: string }[];
-  entities: EntityView[];
+  marking: Record<string, Token[]>;
+  running: RunningFiring[];
+  sensors: Record<string, unknown>;
+  sensorFaults: Record<string, SensorFault>;
+  netFaults: Record<string, NetFault>;
+  activeModules: string[];
+  speed: number | null;
 }
+
+export type EventType =
+  | 'SIMULATION_STARTED' | 'SIMULATION_STOPPED' | 'SIMULATION_RESET'
+  | 'COMMAND_RECEIVED' | 'COMMAND_COMPLETED'
+  | 'TRANSITION_STARTED' | 'TRANSITION_COMPLETED'
+  | 'TOKEN_PLACED' | 'TOKEN_REMOVED' | 'TOKEN_LOST'
+  | 'FAULT_ACTIVATED' | 'FAULT_CLEARED' | 'MODULES_CHANGED';
 
 export interface SimEvent {
-  id: string;
-  timestamp: string;
-  sourceComponentId: string | null;
-  type: string;
+  index: number;
+  time: string;
+  type: EventType;
+  subject: string | null;
   commandId: string | null;
   origin: string | null;
-  payload: Record<string, unknown>;
+  data: Record<string, unknown>;
 }
 
-export interface RealTime { enabled: boolean; speedFactor: number | null }
+/** What the inspector shows: a place, a transition or a sensor of the net. */
+export type Selection = { kind: 'place' | 'transition' | 'sensor'; name: string };

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './api';
-import type { RealTime, SimEvent, Snapshot } from './types';
+import type { SimEvent, Snapshot } from './types';
 import { seconds } from './time';
 
 export function usePolling<T>(load: () => Promise<T>, intervalMs: number, deps: unknown[]) {
@@ -39,7 +39,7 @@ export function usePolling<T>(load: () => Promise<T>, intervalMs: number, deps: 
   return { data, error, receivedAt, refresh };
 }
 
-/** Appends new events by polling with an index; starts over when the log was cleared (reset). */
+/** Appends new trace events by polling with an index; starts over when the trace was cleared (reset). */
 export function useEvents(simulationId: string, snapshot: Snapshot | null) {
   const [events, setEvents] = useState<SimEvent[]>([]);
   const eventsRef = useRef(events);
@@ -60,7 +60,7 @@ export function useEvents(simulationId: string, snapshot: Snapshot | null) {
         const from = eventsRef.current.length;
         const fresh = await api.events(simulationId, from);
         if (active && fresh.length > 0) {
-          if (fresh[0].type === 'SIMULATION_RESET' && from > 0) setEvents(fresh);
+          if (fresh[0].index < from) setEvents(fresh);
           else setEvents((current) => [...current, ...fresh]);
         }
       } catch {
@@ -76,14 +76,6 @@ export function useEvents(simulationId: string, snapshot: Snapshot | null) {
   }, [simulationId]);
 
   return { events, clear: () => setEvents([]) };
-}
-
-export function useRealTime(simulationId: string) {
-  const [realTime, setRealTime] = useState<RealTime>({ enabled: false, speedFactor: null });
-  useEffect(() => {
-    api.realTime(simulationId).then(setRealTime).catch(() => undefined);
-  }, [simulationId]);
-  return [realTime, setRealTime] as const;
 }
 
 /** Re-renders every animation frame while {@code active}, so clocks and progress bars move smoothly. */

@@ -1,6 +1,6 @@
 # Layout format
 
-A layout is one YAML file. Bundled layouts live in `src/main/resources/layouts/`; set `simulation.layouts.dir` to load more from a folder without rebuilding. Example: [fischertechnik.yaml](../../src/main/resources/layouts/fischertechnik.yaml). Decisions: [ADR 0011](../adr/0011-layouts-as-timed-coloured-petri-nets.md), [ADR 0015](../adr/0015-generic-layout-interface-adapter.md).
+A layout is one YAML file. Bundled layouts live in `src/main/resources/layouts/`; set `simulation.layouts.dir` to load more from a folder without rebuilding. Example: [fischertechnik.yaml](../../src/main/resources/layouts/fischertechnik.yaml). How the file maps to the net, with a worked example: [yaml-to-petri-net.md](yaml-to-petri-net.md); pictures: [../diagrams/petri-nets](../diagrams/petri-nets/README.md). Decisions: [ADR 0011](../adr/0011-layouts-as-timed-coloured-petri-nets.md), [ADR 0015](../adr/0015-generic-layout-interface-adapter.md).
 
 The file is validated when the simulator starts. Unknown keys, unknown places and unbound variables stop the start with the file name in the message. Top-level keys starting with `x-` are ignored; use them to hold YAML anchors (`&name`, `*name`) for values you repeat, e.g. error responses.
 
@@ -10,7 +10,7 @@ The file is validated when the simulator starts. Unknown keys, unknown places an
 id: fischertechnik            # used in URLs and by the control API
 name: Fischertechnik Factory 4.0
 description: ...
-image: ...                    # picture for the web UI
+image: ...                    # photo of the physical layout for the web UI
 tokens: ...                   # workpieces a user can place
 places: ...                   # the net
 transitions: ...
@@ -121,9 +121,11 @@ Published for the most recently started running simulation of the layout, with t
 
 ## Picture and workpieces
 
+`image` is the photo the web UI shows, with the pixel position of each place or sensor on it: workpieces are drawn where their place is, places named `*_idle` (machine ready) as machine chips, sensors as dots. `tokens` are the workpieces a user can put into places from the UI.
+
 ```yaml
 image:
-  url: /layouts/fischertechnik.png   # file in web/public/layouts/
+  url: /pictures/fischertechnik.png   # file in web/public/pictures/ (not /layouts/: that path is the control API)
   width: 1428
   height: 1000
   positions: {oven: [865, 318], ov_lb5: [822, 318]}   # place or sensor → pixel

@@ -8,7 +8,7 @@ What is still needed from the lab. The arm side is modelled from `dobot-main`, s
 - [x] Endpoints, parameters, responses and errors
 - [x] Stone positions, home pose, factory route
 - [x] Kafka message format (topic `Dobot`)
-- [x] Picture for the UI (`web/public/layouts/dobot-conveyer.png`, product photo)
+- [x] Picture for the UI (`web/public/pictures/dobot-conveyer.png`, product photo)
 
 ## Arm
 

@@ -1,4 +1,6 @@
-import type { EntityView, SimEvent } from './types';
+import type { NetDefinition, SimEvent } from './types';
+import { formatValue, routeForCommandPlace } from './net';
+import { human, seconds } from './time';
 
 export type Actor = 'application' | 'you' | 'system';
 
@@ -8,70 +10,64 @@ export function actorOf(event: SimEvent): Actor {
   return 'system';
 }
 
-/** Minor events are shown smaller; they describe consequences rather than steps. */
+/** Token movements inside a firing are details; requests, answers and faults are the story. */
 export function isMinor(event: SimEvent): boolean {
-  return event.type === 'COMPONENT_STATE_CHANGED';
+  return event.type === 'TRANSITION_COMPLETED';
 }
 
-function describeValue(value: unknown): string {
-  if (typeof value === 'boolean') return value ? 'yes' : 'no';
-  if (value === '' || value === null || value === undefined) return '–';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+function list(values: unknown): string {
+  if (!values || typeof values !== 'object') return '';
+  return Object.entries(values as Record<string, unknown>).map(([k, v]) => `${k}=${formatValue(v)}`).join(', ');
 }
 
-function list(values: Record<string, unknown> | undefined): string {
-  if (!values) return '';
-  return Object.entries(values).map(([key, value]) => `${key} ${describeValue(value)}`).join(', ');
+function moves(entries: unknown): string {
+  if (!Array.isArray(entries)) return '';
+  return entries.map((e: { place?: string; token?: string }) => `${e.token} ${e.place ? `@ ${e.place}` : ''}`.trim()).join(', ');
 }
 
-export function entityLabel(entityId: unknown, entities: EntityView[]): string {
-  const entity = entities.find((e) => e.id === entityId);
-  const color = entity?.attributes?.color;
-  return color ? `${color} ${entity?.type ?? 'item'} (${entityId})` : String(entityId);
+/** The node an event is about, for highlighting it in the views. */
+export function subjectOf(event: SimEvent): string | null {
+  return event.subject;
 }
 
-export function sentence(event: SimEvent, entities: EntityView[]): string {
-  const source = event.sourceComponentId ?? '';
-  const p = event.payload;
+export function sentence(event: SimEvent, net: NetDefinition | undefined): string {
+  const subject = event.subject ?? '';
+  const data = event.data;
   switch (event.type) {
     case 'SIMULATION_STARTED':
       return 'Simulation started';
     case 'SIMULATION_STOPPED':
-      return 'Simulation stopped';
+      return 'Simulation paused';
     case 'SIMULATION_RESET':
-      return 'Simulation reset to its initial state';
-    case 'ACTION_ACCEPTED': {
-      const params = list(p.parameters as Record<string, unknown>);
-      return `${source} starts ${p.capability}${params ? ` (${params})` : ''}`;
+      return 'Back to the initial marking';
+    case 'COMMAND_RECEIVED': {
+      const route = net && routeForCommandPlace(net, subject);
+      const params = list(data.parameters);
+      return route
+        ? `${route.method.toUpperCase()} ${route.path}${params ? `?${params.replaceAll(', ', '&')}` : ''} → request in ${subject}`
+        : `Request${params ? ` (${params})` : ''} put into ${subject}`;
     }
-    case 'ACTION_COMPLETED':
-      return `${source} finished`;
-    case 'ACTION_REJECTED':
-      return `${source} refused ${p.capability}: ${p.reason}`;
-    case 'ACTION_FAILED':
-      return `${source} failed: ${p.reason}`;
-    case 'CHANGE_REJECTED':
-      return `${source} could not complete a step: ${p.reason}`;
-    case 'ENTITY_CREATED':
-      return `${entityLabel(p.entityId, entities)} placed at ${p.location}`;
-    case 'ENTITY_MOVED':
-      return p.from
-        ? `${entityLabel(p.entityId, entities)} moved from ${p.from} to ${p.to}`
-        : `${entityLabel(p.entityId, entities)} arrived at ${p.to}`;
-    case 'ENTITY_REMOVED':
-      return `${p.entityId} removed`;
-    case 'ENTITY_UPDATED': {
-      const { entityId, ...changes } = p;
-      return `${entityLabel(entityId, entities)} changed: ${list(changes)}`;
+    case 'COMMAND_COMPLETED': {
+      const result = list(data.result);
+      return `Answered after ${subject}${result ? `: ${result}` : ''}`;
     }
-    case 'COMPONENT_STATE_CHANGED':
-      return `${source}: ${list(p)}`;
+    case 'TRANSITION_STARTED':
+      return `${subject} fires (${human(seconds(String(data.duration ?? 'PT0S')))}) · takes ${moves(data.consumed)}`;
+    case 'TRANSITION_COMPLETED':
+      return `${subject} done · puts ${moves(data.produced) || 'nothing'}${data.result ? ` · ${list(data.result)}` : ''}`;
+    case 'TOKEN_PLACED':
+      return `Token ${data.token} put into ${subject}${list(data.attributes) ? ` (${list(data.attributes)})` : ''}`;
+    case 'TOKEN_REMOVED':
+      return `Token ${data.token} taken out of ${subject}`;
+    case 'TOKEN_LOST':
+      return `Token ${subject} lost in ${data.transition}`;
     case 'FAULT_ACTIVATED':
-      return `Fault ${p.fault} switched on for ${source}`;
+      return `${data.level === 'sensor' ? 'Sensor' : 'Transition'} fault ${String(data.fault).toLowerCase()} on ${subject}`;
     case 'FAULT_CLEARED':
-      return `Fault ${p.fault} switched off for ${source}`;
+      return `${data.level === 'sensor' ? 'Sensor' : 'Transition'} fault cleared on ${subject}`;
+    case 'MODULES_CHANGED':
+      return Array.isArray(data.modules) && data.modules.length ? `Only modules ${data.modules.join(', ')} run` : 'All modules run';
     default:
-      return `${event.type.toLowerCase().replaceAll('_', ' ')} ${source}`.trim();
+      return `${String(event.type).toLowerCase().replaceAll('_', ' ')} ${subject}`.trim();
   }
 }

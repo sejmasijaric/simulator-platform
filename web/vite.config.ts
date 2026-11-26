@@ -8,7 +8,10 @@ export default defineConfig({
   server: {
     proxy: {
       '/simulations': backend,
-      '/simulation-definitions': backend,
+      '/layouts': backend,
+      // The layouts' own HTTP APIs (/ov/burn, /vgr/..., ...): their paths come from the YAML, so
+      // everything that is not a file of the dev server goes to the simulator.
+      '^/(?!@|src/|node_modules/|pictures/|favicon|index\\.html).+': backend,
     },
   },
   build: {

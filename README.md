@@ -5,14 +5,16 @@ Simulation of physical lab layouts (Fischertechnik Factory 4.0; Dobot + conveyor
 Each layout is a **timed, coloured Petri net in a YAML file**: places for positions, machine states and request queues, transitions for what the machines can do, sensors derived from where the tokens are, and the layout's own HTTP API and MQTT messages. One generic core runs any such file; no layout needs Java code.
 
 - Architecture: [docs/architecture.md](docs/architecture.md)
-- Layout format: [docs/layouts/layout-format.md](docs/layouts/layout-format.md)
+- Layout format: [docs/layouts/layout-format.md](docs/layouts/layout-format.md); how the YAML is a Petri net: [docs/layouts/yaml-to-petri-net.md](docs/layouts/yaml-to-petri-net.md)
+- Petri net diagrams of every layout: [docs/diagrams/petri-nets](docs/diagrams/petri-nets/README.md), generated with `python3 scripts/render-petri-nets.py` (needs PyYAML and Graphviz)
 - Decisions: [docs/adr](docs/adr/README.md)
 - Physical interfaces: [Fischertechnik](docs/layouts/fischertechnik/http-api.md), [Dobot](docs/layouts/dobot/http-api.md)
 
 ## Status
 
 - Implemented: the Petri net core (guards, inhibitor arcs, parameter-dependent durations, results), generic faults on sensor and net level, the YAML loader, the REST control API, the generic layout HTTP API and MQTT publisher, and the Fischertechnik factory as [fischertechnik.yaml](src/main/resources/layouts/fischertechnik.yaml).
-- Next: adapt the web UI to the Petri net (net view, fault panel, module runner); model the Dobot + conveyor in YAML; validate timings against lab recordings.
+- Web UI on the Petri net: the marking on the photo of the layout (workpieces, machines, sensors), inspector for places, transitions and sensors with fault controls, the layout's API to try commands, module switches, trace. The nets themselves are documented as generated pictures.
+- Next: model the Dobot + conveyor in YAML; validate timings against lab recordings.
 - Example application: [applications](applications/README.md).
 
 ## Packages (`ch.hsg.simulation`)

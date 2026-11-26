@@ -59,7 +59,7 @@ x-errors:
 # ---- picture and workpieces for the web UI ----
 
 image:
-  url: /layouts/fischertechnik.png
+  url: /pictures/fischertechnik.png
   width: 1428
   height: 1000
   positions:

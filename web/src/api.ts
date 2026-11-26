@@ -1,4 +1,4 @@
-import type { Definition, RealTime, SimEvent, Snapshot } from './types';
+import type { NetDefinition, NetFaultType, SensorFaultType, SimEvent, Snapshot } from './types';
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, {
@@ -7,33 +7,51 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await response.text();
-  const data = text ? JSON.parse(text) : undefined;
+  let data: unknown;
+  try {
+    data = text ? JSON.parse(text) : undefined;
+  } catch {
+    data = text;
+  }
   if (!response.ok) {
-    throw new Error(data?.error ?? `Request failed (${response.status})`);
+    const message = (data as { error?: string; message?: string } | undefined);
+    throw new Error(message?.error ?? message?.message ?? `Request failed (${response.status})`);
   }
   return data as T;
 }
 
 const sim = (id: string) => `/simulations/${id}`;
 
+/** The simulator's control API (ControlController). Applications use the layout's own API instead. */
 export const api = {
-  definitions: () => request<Definition[]>('GET', '/simulation-definitions'),
+  layouts: () => request<NetDefinition[]>('GET', '/layouts'),
   simulations: () => request<Snapshot[]>('GET', '/simulations'),
-  create: (definitionId: string) => request<{ id: string }>('POST', '/simulations', { definitionId }),
+  create: (layoutId: string) => request<{ id: string }>('POST', '/simulations', { layoutId }),
   snapshot: (id: string) => request<Snapshot>('GET', sim(id)),
   remove: (id: string) => request<void>('DELETE', sim(id)),
   start: (id: string) => request<Snapshot>('POST', `${sim(id)}/start`),
   stop: (id: string) => request<Snapshot>('POST', `${sim(id)}/stop`),
   reset: (id: string) => request<Snapshot>('POST', `${sim(id)}/reset`),
   step: (id: string) => request<{ stepped: boolean; time: string }>('POST', `${sim(id)}/step`),
+  setSpeed: (id: string, factor: number) => request<Snapshot>('PUT', `${sim(id)}/speed`, { factor }),
+  stopRealTime: (id: string) => request<Snapshot>('DELETE', `${sim(id)}/speed`),
   events: (id: string, from: number) => request<SimEvent[]>('GET', `${sim(id)}/events?from=${from}`),
-  realTime: (id: string) => request<RealTime>('GET', `${sim(id)}/real-time`),
-  enableRealTime: (id: string, speedFactor: number) =>
-    request<RealTime>('PUT', `${sim(id)}/real-time`, { speedFactor }),
-  disableRealTime: (id: string) => request<RealTime>('DELETE', `${sim(id)}/real-time`),
-  setFault: (id: string, componentId: string, faultId: string, active: boolean) =>
-    request<Snapshot>('PUT', `${sim(id)}/components/${componentId}/faults/${faultId}`, { active }),
-  placeEntity: (id: string, type: string, attributes: Record<string, unknown>, componentId: string) =>
-    request<Snapshot>('POST', `${sim(id)}/entities`, { type, attributes, componentId }),
-  removeEntity: (id: string, entityId: string) => request<Snapshot>('DELETE', `${sim(id)}/entities/${entityId}`),
+
+  placeToken: (id: string, place: string, attributes: Record<string, unknown>) =>
+    request<{ id: string }>('POST', `${sim(id)}/tokens`, { place, attributes }),
+  removeToken: (id: string, tokenId: string) => request<Snapshot>('DELETE', `${sim(id)}/tokens/${tokenId}`),
+
+  setSensorFault: (id: string, sensor: string, type: SensorFaultType, value: unknown, delay: string | null) =>
+    request<Snapshot>('PUT', `${sim(id)}/faults/sensors/${sensor}`, { type, value, delay }),
+  clearSensorFault: (id: string, sensor: string) => request<Snapshot>('DELETE', `${sim(id)}/faults/sensors/${sensor}`),
+  setNetFault: (id: string, transition: string, type: NetFaultType, factor: number | null, place: string | null) =>
+    request<Snapshot>('PUT', `${sim(id)}/faults/transitions/${transition}`, { type, factor, place }),
+  clearNetFault: (id: string, transition: string) =>
+    request<Snapshot>('DELETE', `${sim(id)}/faults/transitions/${transition}`),
+
+  setModules: (id: string, modules: string[]) => request<Snapshot>('PUT', `${sim(id)}/modules`, { modules }),
+
+  /** Puts a request token into a command place, as the layout's API would, without waiting for it. */
+  command: (id: string, place: string, parameters: Record<string, unknown>, returnsAfter: string[]) =>
+    request<{ commandId: string }>('POST', `${sim(id)}/commands`, { place, parameters, returnsAfter, await: false }),
 };

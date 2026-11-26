@@ -9,3 +9,5 @@ tools/
 # local Claude Code settings
 .claude/
 .mcp.json
+
+docs/diagrams/petri-nets/*

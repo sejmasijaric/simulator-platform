@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { api } from './api';
 import { usePolling } from './hooks';
+import { modulesOf } from './net';
 import { clock, seconds } from './time';
-import type { Definition } from './types';
+import type { NetDefinition } from './types';
 
 export function StartScreen({ onOpen }: { onOpen: (id: string) => void }) {
-  const definitions = usePolling(api.definitions, 10000, []);
+  const layouts = usePolling(api.layouts, 10000, []);
   const runs = usePolling(api.simulations, 2000, []);
   const [error, setError] = useState<string | null>(null);
 
-  const launch = async (definition: Definition) => {
+  const launch = async (net: NetDefinition) => {
     try {
-      const { id } = await api.create(definition.id);
+      const { id } = await api.create(net.id);
       await api.start(id);
-      await api.enableRealTime(id, 1);
+      await api.setSpeed(id, 1);
       onOpen(id);
     } catch (e) {
       setError((e as Error).message);
@@ -30,31 +31,44 @@ export function StartScreen({ onOpen }: { onOpen: (id: string) => void }) {
     }
   };
 
+  const nameOf = (layoutId: string) => layouts.data?.find((l) => l.id === layoutId)?.name ?? layoutId;
+
   return (
     <div className="start">
-      <h1>Choose a lab</h1>
-      <p className="muted">Each lab is a simulated copy of a physical layout. Your application talks to it like to the real one.</p>
+      <h1>Choose a layout</h1>
+      <p className="muted">
+        Each layout is a timed, coloured Petri net declared in YAML. The simulator runs the net and
+        offers the physical layout's own API, so your application talks to it like to the real one.
+      </p>
       {error && <p className="error">{error}</p>}
-      {definitions.error && <p className="error">Can't reach the simulator: {definitions.error}</p>}
+      {layouts.error && <p className="error">Can't reach the simulator: {layouts.error}</p>}
 
       <div className="layouts">
-        {definitions.data?.map((definition) => (
-          <div key={definition.id} className="card layout-card">
-            <Preview definition={definition} />
-            <h2>{definition.name}</h2>
-            <p className="muted small" style={{ margin: 0, flex: 1 }}>{definition.description}</p>
-            <div><button className="primary" onClick={() => launch(definition)}>Open lab</button></div>
+        {layouts.data?.map((net) => (
+          <div key={net.id} className="card layout-card">
+            {net.image
+              ? <img src={net.image.url} alt="" className="preview" />
+              : <div className="preview placeholder mono">{net.id}.yaml</div>}
+            <h2>{net.name}</h2>
+            <p className="muted small" style={{ margin: 0, flex: 1 }}>{net.description}</p>
+            <div className="stats small">
+              <span><b>{net.places.length}</b> places</span>
+              <span><b>{net.transitions.length}</b> transitions</span>
+              <span><b>{net.http.routes.length}</b> API routes</span>
+              <span><b>{modulesOf(net).length}</b> modules</span>
+            </div>
+            <div><button className="primary" onClick={() => launch(net)}>Open simulation</button></div>
           </div>
         ))}
       </div>
 
       {runs.data && runs.data.length > 0 && (
         <>
-          <h2 style={{ marginBottom: 8 }}>Running simulations</h2>
+          <h2 style={{ marginBottom: 8 }}>Simulations</h2>
           <div className="runs">
             {runs.data.map((run) => (
               <div className="run" key={run.id}>
-                <span style={{ flex: 1 }}>{run.name}</span>
+                <span style={{ flex: 1 }}>{nameOf(run.layoutId)} <span className="mono small muted">{run.id.slice(0, 8)}</span></span>
                 <span className={`chip ${run.status.toLowerCase()}`}>{run.status.toLowerCase()}</span>
                 <span className="mono small muted">{clock(seconds(run.time))}</span>
                 <button onClick={() => onOpen(run.id)}>Open</button>
@@ -65,18 +79,5 @@ export function StartScreen({ onOpen }: { onOpen: (id: string) => void }) {
         </>
       )}
     </div>
-  );
-}
-
-function Preview({ definition }: { definition: Definition }) {
-  const view = definition.layoutView;
-  if (!view) return null;
-  const points = Object.values(view.positions);
-  return (
-    <svg viewBox={`0 0 ${view.width} ${view.height}`} width="100%" height="110" preserveAspectRatio="xMidYMid meet">
-      {points.map((point, index) => (
-        <circle key={index} cx={point.x} cy={point.y} r={18} fill="var(--accent-bg)" stroke="var(--accent)" strokeWidth={2} />
-      ))}
-    </svg>
   );
 }
