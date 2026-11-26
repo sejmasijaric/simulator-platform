@@ -16,9 +16,9 @@
 id: fischertechnik
 name: Fischertechnik Factory 4.0
 description: >-
-  Gripper, oven, transport, milling machine, sorting line and warehouse of the lab factory.
-  Applications use the factory's own HTTP API (/vgr/..., /ov/..., ...) and MQTT topics
-  (FTFactory/<STATION>) on this server.
+  The lab's production line: a vacuum gripper, oven, transport, milling machine and colour
+  sorting line move workpieces through the factory. The high-bay warehouse is out of service,
+  as in the lab. Drive it through the factory's own HTTP API and MQTT status messages.
 
 # ---- shared values, referenced with *name below ----
 

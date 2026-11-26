@@ -5,6 +5,7 @@ Example applications, one folder per layout. They show how an application drives
 | Layout | Application | Talks to the layout through |
 |---|---|---|
 | Fischertechnik Factory 4.0 | [fischertechnik](fischertechnik/README.md) | the factory's own HTTP API, served from the layout YAML ([ADR 0015](../docs/adr/0015-generic-layout-interface-adapter.md)) |
+| Dobot Magician + conveyor | [dobot](dobot/README.md) | the Dobot's own HTTP API (`/move_to`, `/pick_up_and_transport`), served from the layout YAML |
 
 ## Developing an application with the factory simulator
 

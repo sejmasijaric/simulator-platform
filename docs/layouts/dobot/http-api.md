@@ -108,8 +108,9 @@ After every move the lab code sends `{"position": {"x": …, "y": …, "z": …,
 
 Modelled as a Petri net in [dobot.yaml](../../../src/main/resources/layouts/dobot.yaml) (first version, 2026-11-26); what it covers and what it does not: [applying-the-simulator.md](applying-the-simulator.md).
 
-- Positions are places (`pos1` … `pos8`, `factory`, `table`); coordinates `x,y,z,r` are not simulated and are rejected.
+- Positions are places (`pos1` … `pos8`, `table`). `factory` and coordinates `x,y,z,r` are not simulated and are rejected like an unknown position.
 - A stone dropped on an occupied position lands on `table`. Picking from an empty position succeeds without moving anything.
-- Durations are guesses: move 4 s, pick 3 s, drop 3 s, factory route 10 s.
+- Durations are guesses: move 4 s, pick 3 s, drop 3 s.
+- Example application: [applications/dobot](../../../applications/dobot/README.md).
 - Conveyor (module `conveyor`): `cmd_conveyor_run` moves a stone from `conveyor_start` to `conveyor_end` in 5 s, through the control API only. The arm reaches the belt as `conveyor_start` / `conveyor_end`, which are not in the lab code.
 - Faults are the generic ones, e.g. `TOKEN_LOSS` on `dobot_pick`.
