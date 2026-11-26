@@ -15,6 +15,7 @@ tokens: ...                   # workpieces a user can place
 places: ...                   # the net
 transitions: ...
 sensors: ...                  # what applications read
+settings: ...                 # values the API can change, e.g. motor speeds
 http: ...                     # the layout's own HTTP API
 events: ...                   # messages it publishes (MQTT)
 ```
@@ -59,6 +60,7 @@ transitions:
 | `inhibit` | places that must be empty (inhibitor arcs) |
 | `result` | values handed back to the waiting request, e.g. `{color: "${wp.color}"}` |
 | `priority` | higher is tried first when transitions compete; then declaration order |
+| `speed` | setting(s) of the motors that move during the transition, e.g. `[vgr_m1_speed, vgr_m2_speed]`; see Settings |
 | `module` | as for places |
 
 Places in `in`, `out` and `inhibit` may be templates, `"${start}"`, filled from the request's parameters. They must be quoted in YAML.
@@ -69,6 +71,20 @@ Rules:
 - It takes the inputs at once; the tokens are inside the transition until `duration` has passed. Sensors do not see them meanwhile.
 - The request parameters of a firing are the attributes of the tokens it takes, the earlier arc winning. A task with several steps passes the request on as a job token (`{ov_job: job}`) so the later steps still see `${time}`, `${end}`.
 
+## Settings
+
+```yaml
+settings:
+  ov_m1_speed: {initial: 512, min: -512, max: 512, module: ov}
+transitions:
+  ov_drive_in:
+    ...
+    duration: 5s          # measured at the initial speed
+    speed: ov_m1_speed    # or a list: the slowest motor counts
+```
+
+Whole-number values an application changes through the API ([ADR 0017](../adr/0017-settings-and-running-step-sensors.md)). Writes are clamped to `min`..`max`; a reset of the simulation restores `initial`. A transition with `speed` takes `duration × initial / |speed|` (the slowest of its settings); its `per-unit` part does not change. At speed 0 the transition does not start until the speed changes. Settings are changed by routes with `sets`/`resets` (below) or by the control API (`PUT /simulations/{id}/settings/{name}` `{"value": 256}`, `DELETE` to reset).
+
 ## Sensors
 
 ```yaml
@@ -78,6 +94,17 @@ sensors:
   hbw_stock: {count: high_bay_warehouse_rack}          # number of tokens
   sm_i2: {attribute: color, place: color_sensor, values: {white: 1000, red: 1350, blue: 1560, "null": 1766}}
 ```
+
+A sensor can also show the step that is running, e.g. a station's `current_task`:
+
+```yaml
+  ov_task:
+    running:
+      ov_drive_in: "burning the workpiece for ${time} seconds"   # filled from the request
+      ov_burn: "burning the workpiece for ${time} seconds"
+```
+
+It reads `""` while none of the named transitions fires.
 
 `values` translates the derived value, written as text (`true`, `3`, `red`, `null`), to what the hardware reports. Sensors are computed when read; sensor faults apply on top.
 
@@ -103,6 +130,7 @@ http:
       body: '[{"interrupted": ${read}}]'
 ```
 
+- A route that has `sets` (`{"vgr_m${motor}_speed": "${speed}"}`) or `resets` (a list of settings) is a **setting** route: it changes settings, fires nothing and answers at once. A query's `reads` may name a setting too: `reads: vgr_m${motor}_speed`.
 - A route is a **command** if it has `command` (the command place to put a request token into); it answers once one of `returns-after` has fired for that request, or 504 after `timeout` (default 30 minutes). Otherwise it is a **query**: it reads the sensor `reads` and fires nothing.
 - `parameters` are checked in order before anything happens. `required`, `values` (allowed values), `default`, `integer`; `missing` and `invalid` are the error answers `{status, body}`, with `${value}` for the offending value.
 - Placeholders in `body`, `envelope` and errors: `${name}` request parameter, `${result.x}` result of the ending transition, `${read}` the sensor read, `${sensor.x}` any sensor, `${body}` (envelope), `${value}` (errors), `${request.url}`, `${time.start|pattern}`, `${time.end|pattern}`, `${time.elapsed|timedelta}` (Python timedelta), `${now|pattern}`, `${uuid}`. Patterns are Java `DateTimeFormatter` patterns.
@@ -120,6 +148,8 @@ events:
 Published for the most recently started running simulation of the layout, with the current sensor values. Broker: `simulation.events.mqtt.broker-url`.
 
 ## Picture and workpieces
+
+A station is shown as **out of service** in the UI while a place named `<module>_in_service` exists and is empty; let its transitions take and give back that place's token (the Fischertechnik warehouse does).
 
 `image` is the photo the web UI shows, with the pixel position of each place or sensor on it: workpieces are drawn where their place is, places named `*_idle` (machine ready) as machine chips, sensors as dots. `tokens` are the workpieces a user can put into places from the UI.
 

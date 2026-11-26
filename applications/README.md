@@ -8,7 +8,7 @@ Example applications, one folder per layout. They show how an application drives
 
 ## Developing an application with the factory simulator
 
-Start the simulator, then run the application against the factory's HTTP API on the simulator. For the Fischertechnik example, `--setup` uses the simulator's separate control API to create and prepare a simulation; then the process drives it through the same HTTP API as the physical factory. The web UI observes the run; it does not send machine commands.
+Start the simulator, then run the application against the factory's HTTP API on the simulator. For the Fischertechnik example, `--setup` uses the simulator's separate control API to prepare the simulation that is running (the one open in the UI; it creates one only if none runs and never stops one); then the process drives it through the same HTTP API as the physical factory. The web UI observes the run; it does not send machine commands.
 
 ```mermaid
 sequenceDiagram
@@ -22,13 +22,16 @@ sequenceDiagram
 
     Developer->>App: run with --url http://localhost:8080 --setup
     App->>Control: GET /simulations
-    opt a Fischertechnik simulation is already running
-        App->>Control: POST /simulations/{id}/stop
+    alt a Fischertechnik simulation is running (opened in the UI)
+        Note over App,Control: use it
+    else none is running
+        App->>Control: POST /simulations {"layoutId": "fischertechnik"}
+        App->>Control: POST /simulations/{id}/start
+        App->>Control: PUT /simulations/{id}/speed {"factor": 1}
     end
-    App->>Control: POST /simulations {"layoutId": "fischertechnik"}
-    App->>Control: POST /simulations/{id}/start
-    App->>Control: PUT /simulations/{id}/speed {"factor": 1}
-    App->>Control: POST /simulations/{id}/tokens (workpiece on delivery_pick_up_station)
+    opt delivery station is empty
+        App->>Control: POST /simulations/{id}/tokens (workpiece on delivery_pick_up_station)
+    end
 
     loop each production step
         App->>Factory: command (e.g. /ov/burn) or query (light barrier)

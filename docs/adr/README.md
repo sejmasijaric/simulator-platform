@@ -17,5 +17,7 @@
 | [0013](0013-generic-faults-on-two-levels.md) | Faults are generic, on two levels | Accepted |
 | [0014](0014-sensors-are-read-on-demand.md) | Sensors are read on demand | Accepted |
 | [0015](0015-generic-layout-interface-adapter.md) | One generic adapter serves every layout's own interface | Accepted |
+| [0016](0016-fischertechnik-factory-scope.md) | What the Fischertechnik factory simulation covers | Accepted |
+| [0017](0017-settings-and-running-step-sensors.md) | Settings (e.g. motor speeds) and sensors for the running step | Accepted |
 
 Superseded ADRs stay as history; each names the ADR that replaced it.

@@ -67,6 +67,9 @@ public class ControlController {
     public record ModulesRequest(Set<String> modules) {
     }
 
+    public record SettingRequest(Integer value) {
+    }
+
     /** A request token put into a command place directly, to try out what it does in the net. */
     public record CommandRequest(String place, Map<String, Object> parameters, List<String> returnsAfter,
                                  Boolean await, Duration timeout) {
@@ -205,6 +208,19 @@ public class ControlController {
     @PutMapping("/simulations/{id}/modules")
     Snapshot setModules(@PathVariable("id") UUID id, @RequestBody ModulesRequest request) {
         control.setActiveModules(id, request.modules() == null ? Set.of() : request.modules());
+        return control.snapshot(id);
+    }
+
+    @PutMapping("/simulations/{id}/settings/{setting}")
+    Snapshot setSetting(@PathVariable("id") UUID id, @PathVariable("setting") String setting,
+                        @RequestBody SettingRequest request) {
+        control.setSetting(id, setting, required(request.value(), "value"), "control");
+        return control.snapshot(id);
+    }
+
+    @DeleteMapping("/simulations/{id}/settings/{setting}")
+    Snapshot resetSetting(@PathVariable("id") UUID id, @PathVariable("setting") String setting) {
+        control.resetSettings(id, List.of(setting), "control");
         return control.snapshot(id);
     }
 

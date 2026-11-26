@@ -110,7 +110,7 @@ public final class SimulationManager implements SimulationControl, AutoCloseable
         RealTimeDriver driver = drivers.get(id);
         return driver == null ? snapshot : new Snapshot(snapshot.id(), snapshot.layoutId(), snapshot.status(),
                 snapshot.time(), snapshot.marking(), snapshot.running(), snapshot.sensors(), snapshot.sensorFaults(),
-                snapshot.netFaults(), snapshot.activeModules(), driver.speed());
+                snapshot.netFaults(), snapshot.activeModules(), driver.speed(), snapshot.settings());
     }
 
     @Override
@@ -166,6 +166,16 @@ public final class SimulationManager implements SimulationControl, AutoCloseable
     @Override
     public void setActiveModules(UUID id, Set<String> modules) {
         engine(id).setActiveModules(modules);
+    }
+
+    @Override
+    public int setSetting(UUID id, String setting, int value, String origin) {
+        return engine(id).setSetting(setting, value, origin);
+    }
+
+    @Override
+    public void resetSettings(UUID id, java.util.Collection<String> settings, String origin) {
+        engine(id).resetSettings(settings, origin);
     }
 
     // ---- time ----

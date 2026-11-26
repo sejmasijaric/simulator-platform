@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { NetDefinition, Parameter, Route } from './types';
-import { modulesOf, moduleOfRoute } from './net';
+import { modulesOf, moduleOfRoute, render } from './net';
 import { useFrame } from './hooks';
 
 interface Exchange {
@@ -37,6 +37,7 @@ export function HttpPanel({ net }: { net: NetDefinition }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, Record<string, string>>>({});
   const [exchanges, setExchanges] = useState<Record<string, Exchange>>({});
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
   useFrame(Object.values(exchanges).some((e) => e.ended === undefined));
 
   const route = net.http.routes.find((r) => r.name === selected);
@@ -74,7 +75,10 @@ export function HttpPanel({ net }: { net: NetDefinition }) {
         <p className="small muted" style={{ margin: '4px 0 12px' }}>
           {route.kind === 'COMMAND'
             ? <>Command. The simulator puts a request token into <span className="mono">{route.command}</span> and answers once <span className="mono">{route.returnsAfter.join(' or ')}</span> has finished for it, like the real machine answers when it is done.</>
-            : <>Query. Reads <span className="mono">{route.reads}</span> right now; nothing moves.</>}
+            : route.kind === 'SETTING'
+              ? <>Setting. Changes <span className="mono">{[...Object.keys(route.sets).map((name) => render(name, current) ?? name), ...route.resets].join(', ')}</span> right away
+                  (clamped to −512…512 like the controller). Steps driven by that motor take longer or shorter from now on.</>
+              : <>Query. Reads <span className="mono">{route.reads}</span> right now; nothing moves.</>}
         </p>
 
         {route.parameters.length > 0 && (
@@ -124,8 +128,15 @@ export function HttpPanel({ net }: { net: NetDefinition }) {
         Requests sent here behave exactly like your application's and go to the most recently started running simulation.
       </p>
       {order.map((module) => (
-        <div key={module} className="group">
-          <div className="group-title">{module === 'other' ? 'Other' : module.toUpperCase()}</div>
+        <details key={module} className="group" open={openGroups.includes(module)}
+                 onToggle={(e) => {
+                   const isOpen = (e.currentTarget as HTMLDetailsElement).open;
+                   setOpenGroups((current) => isOpen ? [...new Set([...current, module])] : current.filter((m) => m !== module));
+                 }}>
+          <summary className="group-title">
+            {module === 'other' ? 'Other' : module.toUpperCase()}
+            <span className="muted"> · {groups.get(module)!.length} endpoint{groups.get(module)!.length === 1 ? '' : 's'}</span>
+          </summary>
           {groups.get(module)!.map((r) => {
             const exchange = exchanges[r.name];
             return (
@@ -133,11 +144,11 @@ export function HttpPanel({ net }: { net: NetDefinition }) {
                 <span className="method">{r.method.toUpperCase()}</span>
                 <span className="mono path">{r.path}</span>
                 {exchange && <StatusBadge exchange={exchange} />}
-                <span className={`kind-tag ${r.kind.toLowerCase()}`}>{r.kind === 'COMMAND' ? 'command' : 'query'}</span>
+                <span className={`kind-tag ${r.kind.toLowerCase()}`}>{r.kind.toLowerCase()}</span>
               </button>
             );
           })}
-        </div>
+        </details>
       ))}
     </div>
   );

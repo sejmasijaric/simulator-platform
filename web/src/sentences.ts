@@ -65,6 +65,8 @@ export function sentence(event: SimEvent, net: NetDefinition | undefined): strin
       return `${data.level === 'sensor' ? 'Sensor' : 'Transition'} fault ${String(data.fault).toLowerCase()} on ${subject}`;
     case 'FAULT_CLEARED':
       return `${data.level === 'sensor' ? 'Sensor' : 'Transition'} fault cleared on ${subject}`;
+    case 'SETTING_CHANGED':
+      return data.reset ? `${subject} reset to ${formatValue(data.value)}` : `${subject} set to ${formatValue(data.value)}`;
     case 'MODULES_CHANGED':
       return Array.isArray(data.modules) && data.modules.length ? `Only modules ${data.modules.join(', ')} run` : 'All modules run';
     default:

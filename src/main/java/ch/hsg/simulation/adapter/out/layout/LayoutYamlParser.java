@@ -13,6 +13,8 @@ import ch.hsg.simulation.core.net.NetDefinition.Route;
 import ch.hsg.simulation.core.net.NetDefinition.RouteKind;
 import ch.hsg.simulation.core.net.NetDefinition.Sensor;
 import ch.hsg.simulation.core.net.NetDefinition.SensorKind;
+import ch.hsg.simulation.core.net.NetDefinition.Setting;
+import ch.hsg.simulation.core.net.NetDefinition.Speed;
 import ch.hsg.simulation.core.net.NetDefinition.TokenTemplate;
 import ch.hsg.simulation.core.net.NetDefinition.Transition;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -53,18 +55,20 @@ public final class LayoutYamlParser {
 
     private NetDefinition layout(Map<String, Object> yaml) {
         allowOnly(yaml, "layout", Set.of("id", "name", "description", "image", "tokens", "places", "transitions",
-                "sensors", "http", "events"), true);
+                "sensors", "http", "events", "settings"), true);
+        List<Setting> settings = settings(optionalMap(yaml.get("settings"), "settings"));
         return new NetDefinition(
                 string(yaml.get("id"), "id"),
                 optionalString(yaml.get("name")),
                 optionalString(yaml.get("description")),
                 places(map(yaml.get("places"), "places")),
-                transitions(optionalMap(yaml.get("transitions"), "transitions")),
+                transitions(optionalMap(yaml.get("transitions"), "transitions"), settings),
                 sensors(optionalMap(yaml.get("sensors"), "sensors")),
                 http(optionalMap(yaml.get("http"), "http")),
                 events(optionalList(yaml.get("events"), "events")),
                 image(optionalMap(yaml.get("image"), "image")),
-                tokens(optionalMap(yaml.get("tokens"), "tokens")));
+                tokens(optionalMap(yaml.get("tokens"), "tokens")),
+                settings);
     }
 
     // ---- net ----
@@ -80,13 +84,48 @@ public final class LayoutYamlParser {
         return places;
     }
 
-    private List<Transition> transitions(Map<String, Object> yaml) {
+    /** {@code name: {initial: 512, min: -512, max: 512, module: vgr}}. */
+    private List<Setting> settings(Map<String, Object> yaml) {
+        List<Setting> settings = new ArrayList<>();
+        yaml.forEach((name, value) -> {
+            String what = "setting " + name;
+            Map<String, Object> setting = map(value, what);
+            allowOnly(setting, what, Set.of("initial", "min", "max", "module"), false);
+            int initial = integer(setting.get("initial"), what + " initial");
+            settings.add(new Setting(name, initial,
+                    setting.get("min") == null ? Integer.MIN_VALUE : integer(setting.get("min"), what + " min"),
+                    setting.get("max") == null ? Integer.MAX_VALUE : integer(setting.get("max"), what + " max"),
+                    optionalString(setting.get("module"))));
+        });
+        return settings;
+    }
+
+    /**
+     * {@code speed: setting} or {@code speed: [setting, ...]}: the motors the base duration depends on.
+     * The duration was measured at the settings' initial value, which becomes the reference.
+     */
+    private Speed speed(Object value, String what, List<Setting> settings) {
+        if (value == null) {
+            return null;
+        }
+        List<String> names = value instanceof List<?> ? stringList(list(value, what)) : List.of(string(value, what));
+        int reference = names.stream()
+                .map(name -> settings.stream().filter(s -> s.name().equals(name)).findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException(what + ": unknown setting " + name)))
+                .mapToInt(Setting::initial).min().orElse(1);
+        if (reference <= 0) {
+            throw new IllegalArgumentException(what + ": the settings' initial speed must be positive");
+        }
+        return new Speed(names, reference);
+    }
+
+    private List<Transition> transitions(Map<String, Object> yaml, List<Setting> settings) {
         List<Transition> transitions = new ArrayList<>();
         yaml.forEach((name, value) -> {
             String what = "transition " + name;
             Map<String, Object> transition = map(value, what);
             allowOnly(transition, what, Set.of("in", "out", "duration", "per-unit", "when", "inhibit", "result",
-                    "priority", "module"), false);
+                    "priority", "module", "speed"), false);
             String unitParameter = null;
             Duration perUnit = null;
             if (transition.get("per-unit") != null) {
@@ -104,7 +143,8 @@ public final class LayoutYamlParser {
                     stringList(optionalList(transition.get("inhibit"), what + " inhibit")),
                     strings(optionalMap(transition.get("result"), what + " result")),
                     integer(transition.getOrDefault("priority", 0), what + " priority"),
-                    optionalString(transition.get("module"))));
+                    optionalString(transition.get("module")),
+                    speed(transition.get("speed"), what + " speed", settings)));
         });
         return transitions;
     }
@@ -133,7 +173,7 @@ public final class LayoutYamlParser {
         yaml.forEach((name, value) -> {
             String what = "sensor " + name;
             Map<String, Object> sensor = map(value, what);
-            allowOnly(sensor, what, Set.of("occupied", "count", "attribute", "place", "values"), false);
+            allowOnly(sensor, what, Set.of("occupied", "count", "attribute", "place", "values", "running"), false);
             SensorKind kind;
             String place;
             String attribute = null;
@@ -147,8 +187,12 @@ public final class LayoutYamlParser {
                 kind = SensorKind.ATTRIBUTE;
                 attribute = string(sensor.get("attribute"), what);
                 place = string(sensor.get("place"), what + " place");
+            } else if (sensor.containsKey("running")) {
+                Map<String, String> running = strings(map(sensor.get("running"), what + " running"));
+                sensors.add(new Sensor(name, SensorKind.RUNNING, null, null, null, running));
+                return;
             } else {
-                throw new IllegalArgumentException(what + " needs occupied, count or attribute");
+                throw new IllegalArgumentException(what + " needs occupied, count, attribute or running");
             }
             Map<String, Object> values = new LinkedHashMap<>();
             optionalMap(sensor.get("values"), what + " values").forEach(values::put);
@@ -170,7 +214,7 @@ public final class LayoutYamlParser {
         String what = "route " + name;
         Map<String, Object> route = map(value, what);
         allowOnly(route, what, Set.of("get", "post", "put", "delete", "parameters", "command", "returns-after",
-                "timeout", "reads", "body"), false);
+                "timeout", "reads", "body", "sets", "resets"), false);
         String method = null;
         String path = null;
         for (String candidate : List.of("get", "post", "put", "delete")) {
@@ -193,10 +237,14 @@ public final class LayoutYamlParser {
         List<Parameter> parameters = new ArrayList<>();
         optionalMap(route.get("parameters"), what + " parameters")
                 .forEach((parameter, spec) -> parameters.add(parameter(parameter, spec, what)));
-        return new Route(name, command != null ? RouteKind.COMMAND : RouteKind.QUERY, method, path, parameters,
+        Map<String, String> sets = strings(optionalMap(route.get("sets"), what + " sets"));
+        List<String> resets = stringList(optionalList(route.get("resets"), what + " resets"));
+        RouteKind kind = command != null ? RouteKind.COMMAND
+                : !sets.isEmpty() || !resets.isEmpty() ? RouteKind.SETTING : RouteKind.QUERY;
+        return new Route(name, kind, method, path, parameters,
                 command, returnsAfter,
                 route.get("timeout") == null ? null : duration(route.get("timeout"), what + " timeout"),
-                optionalString(route.get("reads")), optionalString(route.get("body")));
+                optionalString(route.get("reads")), optionalString(route.get("body")), sets, resets);
     }
 
     private Parameter parameter(String name, Object value, String route) {

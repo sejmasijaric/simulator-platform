@@ -12,6 +12,7 @@ import ch.hsg.simulation.core.net.Marking;
 import ch.hsg.simulation.core.net.NetDefinition;
 import ch.hsg.simulation.core.net.NetInterpreter;
 import ch.hsg.simulation.core.net.NetInterpreter.Firing;
+import ch.hsg.simulation.core.net.Templates;
 import ch.hsg.simulation.core.net.Token;
 import ch.hsg.simulation.core.port.CommandHandle;
 import ch.hsg.simulation.core.port.SimulationStatus;
@@ -73,6 +74,7 @@ public final class SimulationEngine implements AutoCloseable {
     private Duration now = Duration.ZERO;
     private Marking marking;
     private Set<String> activeModules = Set.of();
+    private final Map<String, Integer> settings = new LinkedHashMap<>();
     private long tokenSequence;
 
     private final ExecutorService loop;
@@ -83,6 +85,7 @@ public final class SimulationEngine implements AutoCloseable {
         this.net = Objects.requireNonNull(net, "net");
         this.interpreter = new NetInterpreter(net);
         this.marking = Marking.initial(net);
+        net.settings().forEach(setting -> settings.put(setting.name(), setting.initial()));
         this.loop = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "simulation-" + id);
             thread.setDaemon(true);
@@ -130,6 +133,7 @@ public final class SimulationEngine implements AutoCloseable {
             queue.clear();
             faults.clear();
             activeModules = Set.of();
+            net.settings().forEach(setting -> settings.put(setting.name(), setting.initial()));
             pending.values().forEach(command -> command.completion().cancel(false));
             pending.clear();
             commandOrigins.clear();
@@ -263,6 +267,35 @@ public final class SimulationEngine implements AutoCloseable {
         });
     }
 
+    /** Changes a setting, clamped to its range; returns the value it now has. Allowed in every state. */
+    public int setSetting(String name, int value, String origin) {
+        return call(() -> {
+            NetDefinition.Setting setting = net.setting(name)
+                    .orElseThrow(() -> new NotFoundException("Unknown setting: " + name));
+            int clamped = setting.clamp(value);
+            settings.put(name, clamped);
+            append(EventType.SETTING_CHANGED, name, null, origin == null ? ORIGIN_CONTROL : origin,
+                    Map.of("value", clamped));
+            afterChange();
+            return clamped;
+        });
+    }
+
+    /** Puts settings back to their initial values. */
+    public void resetSettings(java.util.Collection<String> names, String origin) {
+        call(() -> {
+            for (String name : names) {
+                NetDefinition.Setting setting = net.setting(name)
+                        .orElseThrow(() -> new NotFoundException("Unknown setting: " + name));
+                settings.put(name, setting.initial());
+                append(EventType.SETTING_CHANGED, name, null, origin == null ? ORIGIN_CONTROL : origin,
+                        Map.of("value", setting.initial(), "reset", true));
+            }
+            afterChange();
+            return null;
+        });
+    }
+
     public void setActiveModules(Set<String> modules) {
         call(() -> {
             activeModules = modules == null ? Set.of() : Set.copyOf(modules);
@@ -329,7 +362,7 @@ public final class SimulationEngine implements AutoCloseable {
             }
             return new Snapshot(id, net.id(), status, now, marking.view(), List.copyOf(running),
                     faults.apply(now, trueSensorValues()), faults.sensorFaults(), faults.netFaults(),
-                    activeModules, null);
+                    activeModules, null, settings);
         });
     }
 
@@ -359,7 +392,7 @@ public final class SimulationEngine implements AutoCloseable {
                 throw new SimulationException("Layout " + net.id() + " keeps firing at " + now
                         + "; check for a loop of zero-duration transitions");
             }
-            Optional<Firing> next = interpreter.next(marking, faults, activeModules, () -> nextTokenId("token"));
+            Optional<Firing> next = interpreter.next(marking, faults, activeModules, settings, () -> nextTokenId("token"));
             if (next.isEmpty()) {
                 return;
             }
@@ -449,6 +482,7 @@ public final class SimulationEngine implements AutoCloseable {
                 case COUNT -> marking.count(sensor.place());
                 case ATTRIBUTE -> marking.tokensAt(sensor.place()).stream().findFirst()
                         .map(token -> token.attribute(sensor.attribute())).orElse(null);
+                case RUNNING -> runningText(sensor);
             };
             String key = String.valueOf(value);
             values.put(sensor.name(), sensor.values().containsKey(key) ? sensor.values().get(key) : value);
@@ -485,6 +519,31 @@ public final class SimulationEngine implements AutoCloseable {
         if (net.place(place).isEmpty()) {
             throw new NotFoundException("Unknown place: " + place);
         }
+    }
+
+    /** The text of the first firing in progress the sensor shows, filled from its request; "" if none. */
+    private String runningText(NetDefinition.Sensor sensor) {
+        for (EventQueue.Entry<InProgress> entry : queue.entries()) {
+            Firing firing = entry.item().firing();
+            String template = sensor.running().get(firing.transition().name());
+            if (template != null) {
+                return Templates.render(template, key -> {
+                    int dot = key.indexOf('.');
+                    if (dot > 0) {
+                        String variable = key.substring(0, dot);
+                        for (NetInterpreter.Consumed consumed : firing.consumed()) {
+                            if (variable.equals(consumed.variable())) {
+                                Object value = consumed.token().attribute(key.substring(dot + 1));
+                                return value == null ? "" : value;
+                            }
+                        }
+                    }
+                    Object value = firing.parameters().get(key);
+                    return value == null ? "" : value;
+                });
+            }
+        }
+        return "";
     }
 
     private void requireRunning() {

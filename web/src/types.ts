@@ -22,7 +22,7 @@ export interface Transition {
   module: string | null;
 }
 
-export type SensorKind = 'OCCUPIED' | 'COUNT' | 'ATTRIBUTE';
+export type SensorKind = 'OCCUPIED' | 'COUNT' | 'ATTRIBUTE' | 'RUNNING';
 
 export interface Sensor {
   name: string;
@@ -30,7 +30,12 @@ export interface Sensor {
   place: string;
   attribute: string | null;
   values: Record<string, unknown>;
+  /** RUNNING: transition → text shown while it fires */
+  running: Record<string, string>;
 }
+
+/** A value an application can change through the API, e.g. a motor speed. */
+export interface Setting { name: string; initial: number; min: number; max: number; module: string | null }
 
 export interface Parameter {
   name: string;
@@ -42,7 +47,7 @@ export interface Parameter {
 
 export interface Route {
   name: string;
-  kind: 'COMMAND' | 'QUERY';
+  kind: 'COMMAND' | 'QUERY' | 'SETTING';
   method: string;
   path: string;
   parameters: Parameter[];
@@ -51,6 +56,8 @@ export interface Route {
   timeout: string | null;
   reads: string | null;
   body: string | null;
+  sets: Record<string, string>;
+  resets: string[];
 }
 
 export interface EventTopic { protocol: string; topic: string; every: string | null; payload: string }
@@ -70,6 +77,7 @@ export interface NetDefinition {
   events: EventTopic[];
   image: Image | null;
   tokenTemplates: TokenTemplate[];
+  settings: Setting[];
 }
 
 export interface Token { id: string; attributes: Record<string, unknown>; commandId: string | null }
@@ -100,6 +108,7 @@ export interface Snapshot {
   netFaults: Record<string, NetFault>;
   activeModules: string[];
   speed: number | null;
+  settings: Record<string, number>;
 }
 
 export type EventType =
@@ -107,7 +116,7 @@ export type EventType =
   | 'COMMAND_RECEIVED' | 'COMMAND_COMPLETED'
   | 'TRANSITION_STARTED' | 'TRANSITION_COMPLETED'
   | 'TOKEN_PLACED' | 'TOKEN_REMOVED' | 'TOKEN_LOST'
-  | 'FAULT_ACTIVATED' | 'FAULT_CLEARED' | 'MODULES_CHANGED';
+  | 'FAULT_ACTIVATED' | 'FAULT_CLEARED' | 'MODULES_CHANGED' | 'SETTING_CHANGED';
 
 export interface SimEvent {
   index: number;

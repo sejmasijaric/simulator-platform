@@ -113,33 +113,94 @@ From `workflows/demos_openday/Production_Log.csv` (March 2021, older setup). Use
 | `mm` milling + transport (`drill` + `transport_from_to` in the log) | 32–36 + 24 |
 | `sm sort` | 11–16 |
 
+## Motor speeds
+
+From `set_motor_speed` in the controllers:
+
+- `/<machine>/get_motor_speed?machine=…&motor=<n>` → `"attributes": [{"motor_speed": 512}]`
+- `/<machine>/set_motor_speed?machine=…&motor=<n>&speed=<int>` → `[]`. The speed is a PWM value, clamped to −512…512 (not rejected). The default and the value after a reset is 512.
+- `/<machine>/reset_all_motor_speeds?machine=…` → `[]`.
+- Motors: VGR 1 vertical, 2 horizontal, 3 rotation · OV 1 oven feeder · WT 2 · MM 1 turntable, 2 mill, 3 conveyor belt · SM 1 conveyor belt · HBW 1–4.
+- Unknown motor: 400 `…<class 'ValueError'>:Trying to access non-existing motor <n>`. Missing `motor` or `speed`: 404 `Please make sure that the value of the parameter for the machine is 1`. A non-integer: 500 (HTML).
+- Answered right away, also while the machine works (separate getter/setter queue).
+- Effect: each motor moves a fixed encoder distance at that speed, so movements take longer at a lower speed. Waits written into the code do not change: the oven's blinking (`time × 8 × 0.3 s`), milling seconds, the ejectors' 0.5 s pauses.
+
+## Positions and moves (not simulated)
+
+- `check_position?position=<name>` exists for VGR, WT and MM only → `[{"is_at_queried_position": true|false}]`. VGR: the arm's target is that position (`oven`, `sink_1..3`, `sm_cb`, `delivery_pick_up_station`, `color_detection_delivery_pick_up_station`, `nfc_reader_delivery_pick_up_station`, `waiting_platform`, `high_bay_warehouse_holding_position`). WT: `oven` or `milling_machine`. MM: `initial`, `mill`, `ejection` (its position switches). Any other name: `false`, no error.
+- `/vgr/move_to?position=` and `/wt/move_to?position=` move the arm without a workpiece. `/mm/move_from_to?start&end` moves the empty turntable, `/mm/transport_from_to?start&end` with a workpiece, between `initial`, `mill` and `ejection`.
+
+## Warehouse (out of service)
+
+The high-bay warehouse does not work in the lab (November 2026). `/process/unload_from_hbw_container?color=` calls `/hbw/get_workpiece_by_color`, moves the gripper to `high_bay_warehouse_holding_position` and then polls the warehouse's light barrier every 0.5 s **without a timeout**: with the warehouse out of service the call does not return. To confirm in the lab.
+
+## All endpoints of `app.py`
+
+Every route also takes `machine=<type>_1` (the `/process/*` routes do not). ✓ = simulated (ADR 0016).
+
+| Endpoint | Parameters | `attributes` | Sim |
+|---|---|---|---|
+| `/vgr/pick_up_and_transport` | `start`, `end` | `[]` | ✓ |
+| `/vgr/move_to` | `position` | `[]` | |
+| `/vgr/stop_vacuum_suction` | – | `[]` | |
+| `/vgr/read_color` | – | `[{"current_color": …}]` | |
+| `/vgr/check_position` | `position` | `[{"is_at_queried_position": …}]` | |
+| `/vgr/status_of_light_barrier` | `lb` | `[{"interrupted": …}]` | ✓ |
+| `/vgr/state_of_machine` | – | `[{"state": …}]` | ✓ |
+| `/vgr/get_motor_speed`, `set_motor_speed`, `reset_all_motor_speeds` | `motor`, `speed` | see above | ✓ |
+| `/vgr/calibrate` | `motor` (optional) | `[]` | |
+| `/ov/burn` | `time` | `[]` | ✓ |
+| `/ov/status_of_light_barrier` | `lb` | `[{"interrupted": …}]` | ✓ |
+| `/ov/state_of_machine` | – | `[{"state": …}]` | ✓ |
+| `/ov/get_motor_speed`, `set_motor_speed`, `reset_all_motor_speeds` | `motor`, `speed` | see above | ✓ |
+| `/ov/calibrate` | – | `[]` | |
+| `/wt/pick_up_and_transport` | `start`, `end` | `[]` | ✓ |
+| `/wt/move_to` | `position` | `[]` | |
+| `/wt/check_position` | `position` | `[{"is_at_queried_position": …}]` | |
+| `/wt/state_of_machine` | – | `[{"state": …}]` | ✓ |
+| `/wt/get_motor_speed`, `set_motor_speed`, `reset_all_motor_speeds` | `motor`, `speed` | see above | ✓ |
+| `/wt/calibrate/` (trailing slash) | – | `[]` | |
+| `/mm/mill` | `start`, `end`, `time` | `[]` | ✓ |
+| `/mm/move_from_to`, `/mm/transport_from_to` | `start`, `end` | `[]` | |
+| `/mm/check_position` | `position` | `[{"is_at_queried_position": …}]` | |
+| `/mm/status_of_light_barrier` | `lb` | `[{"interrupted": …}]` | ✓ |
+| `/mm/state_of_machine` | – | `[{"state": …}]` | ✓ |
+| `/mm/get_motor_speed`, `set_motor_speed`, `reset_all_motor_speeds` | `motor`, `speed` | see above | ✓ |
+| `/mm/calibrate` | – | `[]` | |
+| `/sm/detect_color` | – | `[{"color": …}]` | ✓ |
+| `/sm/sort` | `start`, `predefined_ejection_location`, `use_nfc` | `[{"sink": …}]` | ✓ |
+| `/sm/status_of_light_barrier` | `lb` | `[{"interrupted": …}]` | ✓ |
+| `/sm/state_of_machine` | – | `[{"state": …}]` | ✓ |
+| `/sm/get_motor_speed`, `set_motor_speed`, `reset_all_motor_speeds` | `motor`, `speed` | see above | ✓ |
+| `/hbw/store` | `slot`, `color` | `[]` | |
+| `/hbw/unload` | `slot` | `[]` | |
+| `/hbw/change_buckets` | `slot_one`, `slot_two` | `[]` | |
+| `/hbw/get_workpiece_by_color` | `color` | `[]` | |
+| `/hbw/wait_until_light_barrier_is_interrupted` | – | `[]` | |
+| `/hbw/get_amount_of_stored_workpieces` | – | `[{"number": …}]` | |
+| `/hbw/get_slot_number_of_workpiece_by_color` | `color` | `[{"slot_number": …}]` | |
+| `/hbw/status_of_light_barrier`, `state_of_machine`, motor speeds, `calibrate` | as above | as above | |
+| `/process/unload_from_hbw_container` | `color` | `[]` | ✓ |
+| `/process/store`, `/process/produce`, `/process/store_in_hbw_container` | `color` (not `store`) | `[]` | |
+
 ## Using the simulator
 
-The factory is modelled as a Petri net in `src/main/resources/layouts/fischertechnik.yaml`; the generic layout adapter serves the routes declared there.
+The factory is modelled as a Petri net in `src/main/resources/layouts/fischertechnik.yaml`; the generic layout adapter serves the routes declared there. What is and is not simulated, and why: [ADR 0016](../../adr/0016-fischertechnik-factory-scope.md).
 
 - Base URL: `http://localhost:8080` instead of `http://192.168.0.21:5000`. Paths, parameters, responses and error messages are the same.
 - Create and start a Fischertechnik simulation in the web UI first. With none running, calls return 503. With several, the most recently started one answers.
 - The simulator switches the simulation to real time (1×) if needed. A higher speed makes the commands finish faster.
-- Implemented: the six commands above, `/process/unload_from_hbw_container?color=`, `status_of_light_barrier` (vgr, ov, mm, sm) and `state_of_machine` (vgr, ov, wt, mm, sm).
 - Workpieces are tokens placed in the UI (or with `POST /simulations/{id}/tokens`). The places are the API's position names plus `oven_chamber`, `mm_milled`, `milling_machine_belt`, `sorting_machine_start`, `color_sensor` and the warehouse stock `high_bay_warehouse_rack` (up to 9).
-- Light barriers are sensors named `<machine>_lb<input>`, e.g. `sm_lb6`.
+- Light barriers are sensors named `<machine>_lb<input>`, e.g. `sm_lb6`. Motor speeds are settings named `<machine>_m<motor>_speed`.
+- The warehouse is out of service: put a token into the place `hbw_in_service` (in the UI: click the warehouse's station dot, "make ready") to simulate a working one.
 
-Differences from the physical factory:
+Differences from the physical factory (also in ADR 0016):
 
-- `/sm/sort` with `start=sm_cb` or `predefined_ejection_location=corner` returns 400 (not modelled yet).
+- `/sm/sort` with `start=sm_cb` or `predefined_ejection_location=corner` returns 400 (not modelled).
 - `/sm/sort` with location `none` and no detectable colour waits until its timeout instead of answering 400.
 - `use_nfc` is accepted and ignored (the physical machine takes 1 s longer).
 - A gripper or transport move to an occupied position waits until it is free; the physical gripper sets the workpiece down anyway.
-- `/process/unload_from_hbw_container` without a stored workpiece of that colour waits, as on the physical factory, until the route's timeout (30 min).
+- The gripper's move takes the same time for every start/end pair.
+- Motor speed is assumed to scale linearly (512 / speed); a negative speed moves at the same pace.
+- A non-integer `motor` answers like an unknown motor (400) instead of 500.
 - Durations are starting values (see above) until the lab recordings are in.
-
-## Endpoints not yet implemented in the simulator
-
-The physical factory offers these too. The simulator does not support them yet. They are listed here so they can be added later.
-
-- Every machine: `calibrate`, `state_of_machine`, `get_motor_speed`, `set_motor_speed`, `reset_all_motor_speeds`; most also `status_of_light_barrier?lb=<n>` and `check_position?position=<name>`.
-- VGR: `move_to`, `stop_vacuum_suction`, `read_color`.
-- WT: `move_to`.
-- MM: `move_from_to`, `transport_from_to`.
-- High-bay warehouse: `store`, `unload`, `change_buckets`, `get_workpiece_by_color`, `get_amount_of_stored_workpieces`, `get_slot_number_of_workpiece_by_color`.
-- Composite processes: `/process/store`, `/process/produce?color=`, `/process/store_in_hbw_container`, `/process/unload_from_hbw_container`.

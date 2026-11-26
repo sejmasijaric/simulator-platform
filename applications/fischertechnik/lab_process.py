@@ -7,11 +7,12 @@ gripper delivery station -> oven, burn, workstation transport -> milling machine
 onto the sorting line, detect the colour, sort into a sink. Light barriers are read between the
 steps. Uses only the Python standard library.
 
---setup prepares the simulator (create and start a Fischertechnik simulation, place a workpiece
-on the delivery station). It uses the simulator's control API, which the real factory does not
-have: there, a person puts the workpiece in.
+--setup prepares the simulation that is open in the UI: the running Fischertechnik simulation
+(or --simulation <id> if several run), started if needed, with a workpiece on the delivery station.
+Only if none runs, it creates one. It never stops a simulation. It uses the simulator's control
+API, which the real factory does not have: there, a person puts the workpiece in.
 
-Usage: python3 lab_process.py [--url http://localhost:8080] [--setup] [--color red] [--sink sink_1]
+Usage: python3 lab_process.py [--url http://localhost:8080] [--setup] [--simulation <id>] [--color red] [--sink sink_1]
 """
 import argparse
 import json
@@ -53,29 +54,63 @@ def light_barrier(base, machine, number):
     return "interrupted" if body and body["attributes"][0]["interrupted"] else "free"
 
 
-def setup_simulator(base, color):
+def require(status, body, what):
+    if status >= 300:
+        print(f"Setup failed while {what}: {status} {(body or {}).get('error', '')}")
+        sys.exit(1)
+
+
+def setup_simulator(base, color, simulation_id=None):
+    """Prepares the simulation that is open in the UI: the running Fischertechnik simulation (or the
+    one given with --simulation). Creates and starts one only if none is running. Never stops one."""
     _, simulations = call("GET", f"{base}/simulations")
-    for simulation in simulations or []:
-        if simulation["layoutId"] == "fischertechnik" and simulation["status"] == "RUNNING":
-            call("POST", f"{base}/simulations/{simulation['id']}/stop")
-    _, created = call("POST", f"{base}/simulations", {"layoutId": "fischertechnik"})
-    simulation = f"{base}/simulations/{created['id']}"
-    call("POST", f"{simulation}/start")
-    call("PUT", f"{simulation}/speed", {"factor": 1})
-    call("POST", f"{simulation}/tokens", {"place": "delivery_pick_up_station", "attributes": {"color": color}})
-    print(f"Simulator ready: {created['id']}, {color} workpiece on the delivery station")
+    running = [s for s in simulations or [] if s["layoutId"] == "fischertechnik" and s["status"] == "RUNNING"]
+    if simulation_id:
+        chosen = next((s for s in simulations or [] if s["id"].startswith(simulation_id)), None)
+        if chosen is None:
+            print(f"No simulation {simulation_id}")
+            sys.exit(1)
+    elif len(running) == 1:
+        chosen = running[0]
+    elif len(running) > 1:
+        # The factory API drives the most recently started one; the list does not say which that is.
+        print("Several Fischertechnik simulations are running. Stop the ones you don't use in the UI,")
+        print("or choose one with --simulation <id>:")
+        for s in running:
+            print(f"  {s['id']}")
+        sys.exit(1)
+    else:
+        status, created = call("POST", f"{base}/simulations", {"layoutId": "fischertechnik"})
+        require(status, created, "creating a simulation")
+        chosen = {"id": created["id"], "status": "CREATED", "speed": None, "marking": {}}
+        print(f"No simulation was running; created {created['id']}")
+    simulation = f"{base}/simulations/{chosen['id']}"
+    if chosen["status"] != "RUNNING":
+        require(*call("POST", f"{simulation}/start"), "starting the simulation")
+    if chosen.get("speed") is None:
+        require(*call("PUT", f"{simulation}/speed", {"factor": 1}), "starting real time")
+    if chosen.get("marking", {}).get("delivery_pick_up_station"):
+        print(f"Simulation {chosen['id']}: a workpiece is already on the delivery station")
+    else:
+        status, body = call("POST", f"{simulation}/tokens",
+                            {"place": "delivery_pick_up_station", "attributes": {"color": color}})
+        require(status, body, "putting the workpiece on the delivery station")
+        print(f"Simulation {chosen['id']}: {color} workpiece put on the delivery station")
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default="http://localhost:8080", help="factory or simulator base URL")
-    parser.add_argument("--setup", action="store_true", help="prepare the simulator first (simulator only)")
+    parser.add_argument("--setup", action="store_true",
+                        help="simulator only: use the running simulation (the one open in the UI), start it if needed, "
+                             "put a workpiece on the delivery station")
+    parser.add_argument("--simulation", help="with --setup: id (or its first characters) of the simulation to use")
     parser.add_argument("--color", default="red", help="workpiece colour for --setup")
     parser.add_argument("--sink", default="sink_1", help="sink_1..3, or none to sort by colour")
     args = parser.parse_args()
 
     if args.setup:
-        setup_simulator(args.url, args.color)
+        setup_simulator(args.url, args.color, args.simulation)
     print(f"Running the lab process on {args.url}")
     print(f"  delivery station: {light_barrier(args.url, 'vgr', 7)}")
     factory(args.url, "/vgr/pick_up_and_transport?machine=vgr_1&start=delivery_pick_up_station&end=oven")

@@ -74,6 +74,15 @@ public interface SimulationControl {
     /** Only transitions of these modules (and those without a module) fire; empty = all. */
     void setActiveModules(UUID id, Set<String> modules);
 
+    /**
+     * Changes a setting (e.g. a motor speed), clamped to its range like the physical controller does;
+     * returns the value it now has. {@code origin} is {@code application} or {@code control}.
+     */
+    int setSetting(UUID id, String setting, int value, String origin);
+
+    /** Puts settings back to their initial values. */
+    void resetSettings(UUID id, Collection<String> settings, String origin);
+
     // ---- time ----
 
     /** Ends the next firing in progress, jumping time to it. False if nothing is in progress. */

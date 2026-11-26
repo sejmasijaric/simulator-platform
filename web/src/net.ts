@@ -18,7 +18,7 @@ export function placeKinds(net: NetDefinition): Record<string, PlaceKind> {
   const kinds: Record<string, PlaceKind> = {};
   for (const place of net.places) {
     kinds[place.name] = commands.has(place.name) ? 'command'
-      : place.initial > 0 && place.capacity === 1 ? 'resource' : 'position';
+      : (place.initial > 0 && place.capacity === 1) || place.name.endsWith('_in_service') ? 'resource' : 'position';
   }
   let changed = true;
   while (changed) {
@@ -164,9 +164,24 @@ export function moduleOfSensor(net: NetDefinition, sensor: string): string | nul
   return moduleOfPlace(net, net.sensors.find((s) => s.name === sensor)?.place);
 }
 
-/** The station a route belongs to: its command place, or the sensor it reads. */
+/** A station is out of service while its <module>_in_service place exists and is empty (see layout-format.md). */
+export function outOfService(net: NetDefinition, snapshot: Snapshot, module: string | null): boolean {
+  if (!module) return false;
+  const place = `${module}_in_service`;
+  return net.places.some((p) => p.name === place) && (snapshot.marking[place] ?? []).length === 0;
+}
+
+/** The station a route belongs to: its command place, the setting it changes or reads, or the sensor it reads. */
 export function moduleOfRoute(net: NetDefinition, route: Route): string | null {
+  // a setting by name, or by the fixed start of a template such as vgr_m${motor}_speed
+  const settingModule = (name: string) => {
+    const prefix = name.split('${')[0];
+    return net.settings.find((s) => s.name === name || (prefix !== name && s.name.startsWith(prefix)))?.module ?? null;
+  };
   if (route.command) return moduleOfPlace(net, route.command);
+  const changed = route.resets[0] ?? Object.keys(route.sets)[0];
+  if (changed) return settingModule(changed);
+  if (route.reads && settingModule(route.reads)) return settingModule(route.reads);
   if (!route.reads) return null;
   const parameter = route.parameters.find((p) => route.reads!.includes(`\${${p.name}}`));
   const sensor = parameter && parameter.values.length > 0

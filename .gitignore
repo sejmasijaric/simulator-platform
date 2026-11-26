@@ -10,4 +10,4 @@ tools/
 .claude/
 .mcp.json
 
-docs/diagrams/petri-nets/*
+docs/diagrams/petri-nets

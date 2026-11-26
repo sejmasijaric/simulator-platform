@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
-import { Floor } from './Floor';
+import { Floor, FloorLegend } from './Floor';
 import { Inspector, type InspectorActions } from './Inspector';
 import { StationsPanel } from './StationsPanel';
 import { HttpPanel } from './HttpPanel';
@@ -129,31 +129,36 @@ export function SimulationScreen({ simulationId, onLeave }: Props) {
         <button className="ghost" onClick={onLeave} aria-label="Back to layouts">←</button>
         <h2>{net.name}</h2>
         <span className={`chip ${statusLabel}`}>{statusLabel}</span>
+        <span className="mono tiny muted" title="Simulation id, e.g. for lab_process.py --simulation">{snapshot.id.slice(0, 8)}</span>
         <span style={{ flex: 1 }} />
         {message && <span className="error">{message}</span>}
       </header>
 
       <div className="main">
         <div className="stage">
+          <div className="floor-toolbar">
+            {net.tokenTemplates.length > 0 && (
+              <div className="tray">
+                <span className="muted">Put</span>
+                {net.tokenTemplates.map((template) => (
+                  <button key={template.name} className={placing?.name === template.name ? 'selected' : ''}
+                          onClick={() => setPlacing(placing?.name === template.name ? null : template)} title={template.name}>
+                    <span className="dot" style={{ background: colorOf(template.attributes) ?? 'var(--token)' }} />
+                    {String(template.attributes.color ?? template.name)}
+                  </button>
+                ))}
+              </div>
+            )}
+            <span className="toolbar-hint">
+              {placing
+                ? <>Click a position for the {placing.name.toLowerCase()} · Esc cancels</>
+                : running && !realTime ? 'Time is paused: requests wait until you continue or step.' : ''}
+            </span>
+            <FloorLegend />
+          </div>
           <Floor net={net} kinds={kinds} snapshot={snapshot} now={now} selection={selection}
                  highlight={highlight} placing={placing !== null} onSelect={select} />
 
-          {net.tokenTemplates.length > 0 && (
-            <div className="tray">
-              <span className="muted">Put</span>
-              {net.tokenTemplates.map((template) => (
-                <button key={template.name} className={placing?.name === template.name ? 'selected' : ''}
-                        onClick={() => setPlacing(placing?.name === template.name ? null : template)} title={template.name}>
-                  <span className="dot" style={{ background: colorOf(template.attributes) ?? 'var(--token)' }} />
-                  {String(template.attributes.color ?? template.name)}
-                </button>
-              ))}
-            </div>
-          )}
-          {placing && <div className="hint">Click a position for the {placing.name.toLowerCase()} · Esc cancels</div>}
-          {!placing && running && !realTime && (
-            <div className="hint">Time is paused. Requests wait until you continue or step.</div>
-          )}
         </div>
 
         <aside className="side">
@@ -173,7 +178,9 @@ export function SimulationScreen({ simulationId, onLeave }: Props) {
           {tab === 'stations' && (
             <StationsPanel net={net} snapshot={snapshot}
                            onSelectSensor={(name) => setSelection({ kind: 'sensor', name })}
-                           onModules={(list) => attempt(() => api.setModules(simulationId, list))} />
+                           onModules={(list) => attempt(() => api.setModules(simulationId, list))}
+                           onSetSetting={(name, value) => attempt(() => api.setSetting(simulationId, name, value))}
+                           onResetSetting={(name) => attempt(() => api.resetSetting(simulationId, name))} />
           )}
         </aside>
       </div>

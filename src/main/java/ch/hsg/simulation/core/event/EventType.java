@@ -19,5 +19,7 @@ public enum EventType {
     TOKEN_LOST,
     FAULT_ACTIVATED,
     FAULT_CLEARED,
-    MODULES_CHANGED
+    MODULES_CHANGED,
+    /** a setting (e.g. a motor speed) was changed or reset */
+    SETTING_CHANGED
 }

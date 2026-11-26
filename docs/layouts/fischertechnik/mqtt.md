@@ -66,7 +66,7 @@ The layout file `src/main/resources/layouts/fischertechnik.yaml` declares the sa
 
 Differences from the physical factory:
 
-- WT_1 reports its own status, not always `ready`.
-- Axis and position switches, valves and the compressor report fixed idle values; motor speeds are 512 while the machine works.
-- `current_task` and `current_sub_task` are empty and `current_task_duration` is 0.
+- `current_task` and `current_sub_task` carry the controllers' texts (from `general_txt.py`), e.g. `burning the workpiece for 2 seconds`; as on the physical factory, the transport's task appears in OV_1's fields and WT_1's stay empty. Sub-tasks follow the steps of the net, so where a controller sets several sub-tasks within one step, one text stands for the step.
+- WT_1 reports its own state; physically it always reports `ready`, and OV_1 reports `not ready` while the transport runs.
+- Axis and position switches, valves and the compressor report fixed idle values; motor fields report 512 while the machine works, also after `set_motor_speed`; `current_task_duration` is 0.
 - `SM_1.i2_color_sensor` is 1766 without a workpiece at the colour sensor, and 1000 / 1350 / 1560 for a white / red / blue workpiece there.

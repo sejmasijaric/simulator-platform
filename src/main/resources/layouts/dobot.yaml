@@ -1,0 +1,291 @@
+# Dobot Magician + conveyor as a timed, coloured Petri net. First version (2026-11-26).
+#
+# Sources: docs/layouts/dobot/http-api.md, read from the lab's dobot-main (src/app.py, src/dobot.py),
+# and the Dobot conveyor belt user guide (generation-robots.com). Format: docs/layouts/layout-format.md.
+#
+# Scope of this first version:
+# - Arm (module dobot): the lab's HTTP API /move_to and /pick_up_and_transport with stone positions
+#   pos1..pos8 and the factory route, responses and errors as app.py gives them.
+# - Conveyor (module conveyor): a belt carrying a stone from its start to its end, with the
+#   photoelectric sensor at the end and the colour sensor. The lab code does not drive the conveyor,
+#   so it has no HTTP route yet; run it with the control API (POST /simulations/{id}/commands,
+#   place cmd_conveyor_run) or from the UI. In the kit the belt runs on Dobot 1's Stepper1 port and
+#   the sensors sit on Dobot 2 (GP2 colour, GP4 photoelectric); see the user guide.
+# - The arm can reach the belt as conveyor_start / conveyor_end. These two names are NOT in the
+#   lab code (no coordinates known yet); they are the simulator's proposal for the arm-belt handover.
+# - Not simulated: coordinates "x,y,z,r" as positions, POST /run_xml, Kafka messages, the second arm.
+#
+# All durations are guesses until the lab recordings are in (lab-checklist.md).
+#
+# Patterns (the same as fischertechnik.yaml):
+# - dobot_idle holds one token while the arm is free; requests wait in cmd_dobot_* until it is.
+# - pick_up_and_transport has two steps and passes the request on as a job token (dobot_job).
+# - app.py never checks for a stone: a pick-up without one still runs and succeeds (*_nothing).
+# - Every arm request ends with dobot_finish, which frees the arm and keeps the request in
+#   dobot_last, the request the arm finished last. The response body reads its start and end
+#   through the sensors dobot_start_* / dobot_end_*, which translate a position name into the
+#   coordinates app.py answers with. That is how the layout answers with coordinates without
+#   simulating them.
+
+id: dobot
+name: Dobot Magician + Conveyor
+description: >-
+  Dobot Magician arm with suction cup, eight stone positions, the route into the Fischertechnik
+  factory, and a conveyor belt with photoelectric and colour sensor. Applications use the lab's
+  Dobot HTTP API (/move_to, /pick_up_and_transport) on this server.
+
+# ---- shared values, referenced with *name below ----
+
+x-positions:
+  move-positions: &move_positions [pos1, pos2, pos3, pos4, pos5, pos6, pos7, pos8,
+                                   conveyor_start, conveyor_end]
+  transport-positions: &transport_positions [pos1, pos2, pos3, pos4, pos5, pos6, pos7, pos8,
+                                             conveyor_start, conveyor_end, factory]
+
+# app.py's errors are Werkzeug's HTML pages (quotes escaped as &#39;).
+x-errors:
+  both-required: &both_required
+    status: 400
+    body: |-
+      <!doctype html>
+      <html lang=en>
+      <title>400 Bad Request</title>
+      <h1>Bad Request</h1>
+      <p>Both start and end parameters are required</p>
+  move-invalid: &move_invalid
+    status: 400
+    body: |-
+      <!doctype html>
+      <html lang=en>
+      <title>400 Bad Request</title>
+      <h1>Bad Request</h1>
+      <p>Movement error: 400 Bad Request: Invalid position format: could not convert string to float: &#39;${value}&#39;</p>
+  transport-invalid: &transport_invalid
+    status: 400
+    body: |-
+      <!doctype html>
+      <html lang=en>
+      <title>400 Bad Request</title>
+      <h1>Bad Request</h1>
+      <p>Invalid position format: could not convert string to float: &#39;${value}&#39;</p>
+
+# Position name → what app.py answers: the Python tuple in "message", the JSON array in
+# "*_position". Stone positions from dobot.py; "factory" is answered as the word.
+x-coordinates:
+  tuple: &as_tuple
+    pos1: "(248.3179, 60.3962, -80.2133, -135.4775)"
+    pos2: "(272.3332, 63.7447, -73.8629, -134.4575)"
+    pos3: "(245.3788, 89.3134, -73.6323, -127.9375)"
+    pos4: "(270.5498, 89.5389, -74.2002, -128.9675)"
+    pos5: "(244.3448, 115.0324, -74.6829, -121.4675)"
+    pos6: "(270.0023, 114.7764, -75.2266, -123.6475)"
+    pos7: "(243.6652, 139.5487, -74.7541, -116.8775)"
+    pos8: "(268.6874, 140.1683, -76.0964, -119.1275)"
+    conveyor_start: "conveyor_start"     # no coordinates yet
+    conveyor_end: "conveyor_end"         # no coordinates yet
+    factory: "factory"
+  json: &as_json
+    pos1: "[248.3179,60.3962,-80.2133,-135.4775]"
+    pos2: "[272.3332,63.7447,-73.8629,-134.4575]"
+    pos3: "[245.3788,89.3134,-73.6323,-127.9375]"
+    pos4: "[270.5498,89.5389,-74.2002,-128.9675]"
+    pos5: "[244.3448,115.0324,-74.6829,-121.4675]"
+    pos6: "[270.0023,114.7764,-75.2266,-123.6475]"
+    pos7: "[243.6652,139.5487,-74.7541,-116.8775]"
+    pos8: "[268.6874,140.1683,-76.0964,-119.1275]"
+    conveyor_start: '"conveyor_start"'
+    conveyor_end: '"conveyor_end"'
+    factory: '"factory"'
+
+# ---- picture and workpieces for the web UI ----
+# Product photo (two arms, belt); the stone grid is drawn into the empty top left corner.
+
+image:
+  url: /pictures/dobot-conveyer.png
+  width: 930
+  height: 357
+  positions:
+    pos1: [40, 40]
+    pos2: [40, 75]
+    pos3: [75, 40]
+    pos4: [75, 75]
+    pos5: [110, 40]
+    pos6: [110, 75]
+    pos7: [145, 40]
+    pos8: [145, 75]
+    dobot_idle: [300, 200]
+    dobot_holding: [255, 215]
+    table: [170, 330]
+    conveyor_start: [255, 262]
+    conveyor_end: [600, 262]
+    conveyor_idle: [100, 300]
+    factory: [880, 320]
+    conveyor_ir: [640, 262]
+    conveyor_color: [640, 225]
+
+tokens:
+  Red stone: {color: red}
+  Green stone: {color: green}
+  Blue stone: {color: blue}
+  Yellow stone: {color: yellow}
+
+# ---- the net ----
+
+places:
+  # positions of stones
+  pos1: {capacity: 1, module: dobot}
+  pos2: {capacity: 1, module: dobot}
+  pos3: {capacity: 1, module: dobot}
+  pos4: {capacity: 1, module: dobot}
+  pos5: {capacity: 1, module: dobot}
+  pos6: {capacity: 1, module: dobot}
+  pos7: {capacity: 1, module: dobot}
+  pos8: {capacity: 1, module: dobot}
+  factory: {module: dobot}               # handed over to the Fischertechnik factory
+  table: {module: dobot}                 # where a stone lands when its target is occupied
+  dobot_holding: {capacity: 1, module: dobot}
+  conveyor_start: {capacity: 1, module: conveyor}
+  conveyor_end: {capacity: 1, module: conveyor}
+  # machines: one token while ready
+  dobot_idle: {capacity: 1, initial: 1, module: dobot}
+  conveyor_idle: {capacity: 1, initial: 1, module: conveyor}
+  # request queues
+  cmd_dobot_move: {module: dobot}
+  cmd_dobot_transport: {module: dobot}
+  cmd_conveyor_run: {module: conveyor}
+  # requests in progress
+  dobot_job: {capacity: 1, module: dobot}
+  dobot_done: {capacity: 1, module: dobot}               # request whose moves are done
+  dobot_last: {capacity: 1, initial: 1, module: dobot}   # last finished request, read by the response
+
+transitions:
+  # GET /move_to: to start, then to end. Never touches the suction, so no stone moves.
+  dobot_move:
+    in: [{cmd_dobot_move: job}, dobot_idle]
+    out: [{dobot_done: job}]
+    duration: 4s
+    module: dobot
+
+  # GET /pick_up_and_transport: to start, suction on (3 s) ...
+  dobot_pick:
+    in: [{cmd_dobot_transport: job}, dobot_idle, {"${start}": wp}]
+    when: {start: "!factory"}
+    out: [{dobot_holding: wp}, {dobot_job: job}]
+    duration: 3s
+    module: dobot
+  # ... to end, suction off (3 s); into the factory along the factory route (10 s).
+  dobot_drop:
+    in: [{dobot_job: job}, {dobot_holding: wp}]
+    when: {job.end: "!factory"}
+    out: [{"${end}": wp}, {dobot_done: job}]
+    duration: 3s
+    priority: 1
+    module: dobot
+  dobot_drop_on_table:                  # end occupied: the stone falls next to it
+    in: [{dobot_job: job}, {dobot_holding: wp}]
+    when: {job.end: "!factory"}
+    out: [{table: wp}, {dobot_done: job}]
+    duration: 3s
+    module: dobot
+  dobot_drop_into_factory:
+    in: [{dobot_job: job}, {dobot_holding: wp}]
+    when: {job.end: factory}
+    out: [{factory: wp}, {dobot_done: job}]
+    duration: 10s
+    module: dobot
+  # Nothing at start: the arm runs the same moves and answers success.
+  dobot_transport_nothing:
+    in: [{cmd_dobot_transport: job}, dobot_idle]
+    when: {start: "!factory", end: "!factory"}
+    inhibit: ["${start}"]
+    out: [{dobot_done: job}]
+    duration: 6s
+    module: dobot
+  dobot_transport_nothing_to_factory:
+    in: [{cmd_dobot_transport: job}, dobot_idle]
+    when: {start: "!factory", end: factory}
+    inhibit: ["${start}"]
+    out: [{dobot_done: job}]
+    duration: 13s
+    module: dobot
+  # start=factory: app.py drives into the factory and back with the suction off, so it never
+  # picks anything up (quirk, see http-api.md).
+  dobot_transport_from_factory:
+    in: [{cmd_dobot_transport: job}, dobot_idle]
+    when: {start: factory, end: "!factory"}
+    out: [{dobot_done: job}]
+    duration: 13s
+    module: dobot
+  dobot_transport_from_factory_to_factory:
+    in: [{cmd_dobot_transport: job}, dobot_idle]
+    when: {start: factory, end: factory}
+    out: [{dobot_done: job}]
+    duration: 20s
+    module: dobot
+  # Every arm request ends here, at once: it becomes the last finished request and frees the arm.
+  # Kept out of the timed steps so dobot_last is never empty while the next request runs.
+  dobot_finish:
+    in: [{dobot_done: job}, dobot_last]
+    out: [{dobot_last: job}, dobot_idle]
+    module: dobot
+
+  # Conveyor: carries the stone from conveyor_start to conveyor_end (5 s). In the kit the belt
+  # moves for a set speed and time; how the lab drives it is still open (lab-checklist.md).
+  conveyor_run:
+    in: [{cmd_conveyor_run: job}, conveyor_idle, {conveyor_start: wp}]
+    out: [{conveyor_end: wp}, conveyor_idle]
+    duration: 5s
+    module: conveyor
+  conveyor_run_empty:
+    in: [{cmd_conveyor_run: job}, conveyor_idle]
+    inhibit: [conveyor_start]
+    out: [conveyor_idle]
+    duration: 5s
+    module: conveyor
+
+# ---- what applications read ----
+
+sensors:
+  dobot_state: {occupied: dobot_idle, values: {true: ready, false: busy}}
+  dobot_task:
+    running:
+      dobot_move: "moving from ${start} to ${end}"
+      dobot_pick: "picking up the stone at ${start}"
+      dobot_drop: "dropping the stone at ${end}"
+      dobot_drop_on_table: "dropping the stone at ${end}"
+      dobot_drop_into_factory: "placing the stone in the factory"
+      dobot_transport_nothing: "transporting from ${start} to ${end}"
+      dobot_transport_nothing_to_factory: "transporting from ${start} to ${end}"
+      dobot_transport_from_factory: "transporting from ${start} to ${end}"
+      dobot_transport_from_factory_to_factory: "transporting from ${start} to ${end}"
+  # the last finished request's positions, as app.py writes them (used by the response bodies)
+  dobot_start_tuple: {attribute: start, place: dobot_last, values: *as_tuple}
+  dobot_end_tuple: {attribute: end, place: dobot_last, values: *as_tuple}
+  dobot_start_json: {attribute: start, place: dobot_last, values: *as_json}
+  dobot_end_json: {attribute: end, place: dobot_last, values: *as_json}
+  conveyor_state: {occupied: conveyor_idle, values: {true: ready, false: running}}
+  # photoelectric sensor at the end of the belt (kit: GP4 on Dobot 2)
+  conveyor_ir: {occupied: conveyor_end}
+  # colour sensor (kit: GP2 on Dobot 2); here it sees the stone at the end of the belt
+  conveyor_color: {attribute: color, place: conveyor_end, values: {"null": none}}
+
+# ---- the lab's Dobot HTTP API (app.py) ----
+
+http:
+  routes:
+    dobot_move_to:
+      get: /move_to
+      parameters:
+        start: {required: true, values: *move_positions, missing: *both_required, invalid: *move_invalid}
+        end: {required: true, values: *move_positions, missing: *both_required, invalid: *move_invalid}
+      command: cmd_dobot_move
+      returns-after: dobot_finish
+      body: '{"end_position":${sensor.dobot_end_json},"message":"Moved from ${sensor.dobot_start_tuple} to ${sensor.dobot_end_tuple}","start_position":${sensor.dobot_start_json},"status":"success"}'
+    dobot_pick_up_and_transport:
+      get: /pick_up_and_transport
+      parameters:
+        start: {required: true, values: *transport_positions, missing: *both_required, invalid: *transport_invalid}
+        end: {required: true, values: *transport_positions, missing: *both_required, invalid: *transport_invalid}
+      command: cmd_dobot_transport
+      returns-after: dobot_finish
+      body: '{"end_position":${sensor.dobot_end_json},"message":"Moved from ${sensor.dobot_start_tuple} to ${sensor.dobot_end_tuple}","start_position":${sensor.dobot_start_json},"status":"success"}'

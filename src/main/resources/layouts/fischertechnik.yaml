@@ -52,6 +52,9 @@ x-errors:
   sort-location: &sort_location
     status: 400
     body: '{"error": "400 Bad Request: The machine controller of the addressed machine encountered an error: <class ''ValueError''>:Sink ${value} is not a valid ejection position"}'
+  no-motor: &no_motor
+    status: 400
+    body: '{"error": "400 Bad Request: The machine controller of the addressed machine encountered an error: <class ''ValueError''>:Trying to access non-existing motor ${value}"}'
   unknown-color: &unknown_color
     status: 400
     body: '{"error": "400 Bad Request: Color ${value} does not exist (white, red, blue)"}'
@@ -95,11 +98,33 @@ image:
     sm_lb6: [1140, 715]
     sm_lb7: [1140, 800]
     sm_lb8: [1140, 880]
+    # sensors that are not a light barrier (see the factory booklet, module assignment plans)
+    sm_i2: [1240, 525]         # colour sensor in the dark lock of the sorting line
+    ov_i1: [800, 372]          # oven feeder position switch
+    mm_i1: [1095, 285]         # turntable reference switch of the milling station
+    hbw_stock: [430, 470]      # number of workpieces in the high-bay rack
 
 tokens:
   White workpiece: {color: white}
   Red workpiece: {color: red}
   Blue workpiece: {color: blue}
+
+# ---- motor speeds (set_motor_speed): PWM -512..512, clamped like the controllers do ----
+# The durations below are measured at 512. A transition's `speed` names the motors that move during
+# it; its base duration grows by 512 / speed (the slowest of them). The per-unit part (blinking,
+# milling seconds) is no motor time. Speed 0: the motor stands still and the step does not start.
+# The warehouse (HBW) has motors too, but it is out of service in the lab, so no settings for it.
+
+settings:
+  vgr_m1_speed: {initial: 512, min: -512, max: 512, module: vgr}   # vertical axis
+  vgr_m2_speed: {initial: 512, min: -512, max: 512, module: vgr}   # horizontal axis
+  vgr_m3_speed: {initial: 512, min: -512, max: 512, module: vgr}   # rotation
+  ov_m1_speed: {initial: 512, min: -512, max: 512, module: ov}     # oven feeder
+  wt_m2_speed: {initial: 512, min: -512, max: 512, module: wt}     # workstation transport
+  mm_m1_speed: {initial: 512, min: -512, max: 512, module: mm}     # turntable
+  mm_m2_speed: {initial: 512, min: -512, max: 512, module: mm}     # mill (runs for fixed seconds)
+  mm_m3_speed: {initial: 512, min: -512, max: 512, module: mm}     # conveyor belt
+  sm_m1_speed: {initial: 512, min: -512, max: 512, module: sm}     # conveyor belt
 
 # ---- the net ----
 
@@ -132,6 +157,9 @@ places:
   mm_idle: {capacity: 1, initial: 1, module: mm}
   sm_idle: {capacity: 1, initial: 1, module: sm}
   hbw_idle: {capacity: 1, initial: 1, module: hbw}
+  # The warehouse is out of service in the lab (November 2026): its unload never finishes, the
+  # physical call keeps polling its light barrier. Put a token here to simulate a working one.
+  hbw_in_service: {capacity: 1, module: hbw}
   # request queues
   cmd_vgr_transport: {module: vgr}
   cmd_ov_burn: {module: ov}
@@ -154,17 +182,20 @@ transitions:
     in: [{cmd_vgr_transport: job}, vgr_idle, {"${start}": wp}]
     out: [{vgr_holding: wp}, {vgr_job: job}]
     duration: 20s
+    speed: [vgr_m1_speed, vgr_m2_speed, vgr_m3_speed]
     module: vgr
   vgr_drop:
     in: [{vgr_job: job}, {vgr_holding: wp}]
     out: [{"${end}": wp}, vgr_idle]
     duration: 25s
+    speed: [vgr_m1_speed, vgr_m2_speed, vgr_m3_speed]
     module: vgr
   vgr_move_empty:
     in: [{cmd_vgr_transport: job}, vgr_idle]
     inhibit: ["${start}"]
     out: [vgr_idle]
     duration: 45s
+    speed: [vgr_m1_speed, vgr_m2_speed, vgr_m3_speed]
     module: vgr
 
   # Oven (OV): drives the platform in, burns time x 2.4 s, drives it back out (5 s each way).
@@ -173,12 +204,14 @@ transitions:
     in: [{cmd_ov_burn: job}, ov_idle, {oven: wp}]
     out: [{oven_chamber: wp}, {ov_job: job}]
     duration: 5s
+    speed: ov_m1_speed
     module: ov
   ov_burn:
     in: [{ov_job: job}, {oven_chamber: wp}]
     out: [{oven: wp}, ov_idle]
     duration: 5s
     per-unit: {parameter: time, duration: 2.4s}
+    speed: ov_m1_speed
     module: ov
   ov_burn_empty:
     in: [{cmd_ov_burn: job}, ov_idle]
@@ -186,6 +219,7 @@ transitions:
     out: [ov_idle]
     duration: 10s
     per-unit: {parameter: time, duration: 2.4s}
+    speed: ov_m1_speed
     module: ov
 
   # Workstation transport (WT) between oven and milling machine.
@@ -193,17 +227,20 @@ transitions:
     in: [{cmd_wt_transport: job}, wt_idle, {"${start}": wp}]
     out: [{wt_holding: wp}, {wt_job: job}]
     duration: 20s
+    speed: wt_m2_speed
     module: wt
   wt_drop:
     in: [{wt_job: job}, {wt_holding: wp}]
     out: [{"${end}": wp}, wt_idle]
     duration: 24s
+    speed: wt_m2_speed
     module: wt
   wt_move_empty:
     in: [{cmd_wt_transport: job}, wt_idle]
     inhibit: ["${start}"]
     out: [wt_idle]
     duration: 44s
+    speed: wt_m2_speed
     module: wt
 
   # Milling machine (MM): turns to the mill (8 s) and mills ${time} s; with end=ejection it turns
@@ -215,28 +252,33 @@ transitions:
     out: [{mm_milled: wp}, {mm_job: job}]
     duration: 8s
     per-unit: {parameter: time, duration: 1s}
+    speed: mm_m1_speed
     module: mm
   mm_eject:
     in: [{mm_job: job}, {mm_milled: wp}]
     when: {job.end: ejection}
     out: [{milling_machine_belt: wp}, {mm_belt_job: job}]
     duration: 8s
+    speed: mm_m1_speed
     module: mm
   mm_belt:
     in: [{mm_belt_job: job}, {milling_machine_belt: wp}]
     out: [{sorting_machine_start: wp}, {mm_return_job: job}]
     duration: 6s
+    speed: mm_m3_speed
     module: mm
   mm_turn_back:
     in: [{mm_return_job: job}]
     out: [mm_idle]
     duration: 8s
+    speed: mm_m1_speed
     module: mm
   mm_return:
     in: [{mm_job: job}, {mm_milled: wp}]
     when: {job.end: "!ejection"}
     out: [{milling_machine: wp}, mm_idle]
     duration: 8s
+    speed: mm_m1_speed
     module: mm
   mm_mill_empty:
     in: [{cmd_mm_mill: job}, mm_idle]
@@ -245,6 +287,7 @@ transitions:
     out: [mm_idle]
     duration: 16s
     per-unit: {parameter: time, duration: 1s}
+    speed: mm_m1_speed
     module: mm
   mm_invalid:
     in: [{cmd_mm_mill: job}, mm_idle]
@@ -259,6 +302,7 @@ transitions:
     out: [{color_sensor: wp}, sm_idle]
     duration: 5s
     result: {color: "${wp.color}"}
+    speed: sm_m1_speed
     module: sm
   sm_detect_at_sensor:
     in: [{cmd_sm_detect: job}, sm_idle, {color_sensor: wp}]
@@ -266,6 +310,7 @@ transitions:
     out: [{color_sensor: wp}, sm_idle]
     duration: 0.5s
     result: {color: none}
+    speed: sm_m1_speed
     module: sm
   sm_detect_nothing:
     in: [{cmd_sm_detect: job}, sm_idle]
@@ -273,6 +318,7 @@ transitions:
     out: [sm_idle]
     duration: 5s
     result: {color: none}
+    speed: sm_m1_speed
     module: sm
 
   # sort detects (5 s) and ejects (5 s): into the predefined sink, or with location none by
@@ -283,6 +329,7 @@ transitions:
     out: [{sink_1: wp}, sm_idle]
     duration: 10s
     result: {sink: "1"}
+    speed: sm_m1_speed
     module: sm
   sm_sort_red:
     in: [{cmd_sm_sort: job}, sm_idle, {sorting_machine_start: wp}]
@@ -290,6 +337,7 @@ transitions:
     out: [{sink_2: wp}, sm_idle]
     duration: 10s
     result: {sink: "2"}
+    speed: sm_m1_speed
     module: sm
   sm_sort_blue:
     in: [{cmd_sm_sort: job}, sm_idle, {sorting_machine_start: wp}]
@@ -297,6 +345,7 @@ transitions:
     out: [{sink_3: wp}, sm_idle]
     duration: 10s
     result: {sink: "3"}
+    speed: sm_m1_speed
     module: sm
   sm_sort_predefined:
     in: [{cmd_sm_sort: job}, sm_idle, {sorting_machine_start: wp}]
@@ -304,6 +353,7 @@ transitions:
     out: [{"${predefined_ejection_location}": wp}, sm_idle]
     duration: 10s
     result: {sink: "null"}
+    speed: sm_m1_speed
     module: sm
   sm_sort_predefined_from_sensor:
     in: [{cmd_sm_sort: job}, sm_idle, {color_sensor: wp}]
@@ -312,14 +362,15 @@ transitions:
     out: [{"${predefined_ejection_location}": wp}, sm_idle]
     duration: 5.5s
     result: {sink: "null"}
+    speed: sm_m1_speed
     module: sm
 
   # High-bay warehouse (HBW): hands out a stored workpiece of the requested colour. Without one
   # the request waits, as on the physical factory.
   hbw_unload:
-    in: [{cmd_hbw_unload: job}, hbw_idle, {high_bay_warehouse_rack: wp}]
+    in: [{cmd_hbw_unload: job}, hbw_idle, hbw_in_service, {high_bay_warehouse_rack: wp}]
     when: {wp.color: "${color}"}
-    out: [{high_bay_warehouse: wp}, hbw_idle]
+    out: [{high_bay_warehouse: wp}, hbw_idle, hbw_in_service]
     duration: 45s
     module: hbw
 
@@ -364,6 +415,72 @@ sensors:
   mm_motor: {occupied: mm_idle, values: {true: 0, false: 512}}
   sm_motor: {occupied: sm_idle, values: {true: 0, false: 512}}
   hbw_stock: {count: high_bay_warehouse_rack}
+  # current_task / current_sub_task of the MQTT messages: the texts the controllers set
+  # (hardware/generic/general_txt.py), "" while the machine is ready. Sub-tasks are per step of
+  # the net, which is coarser than the controllers' own sub-steps.
+  vgr_task:
+    running:
+      vgr_pick_up: "picking up and transporting the workpiece from the ${start} to the ${end}"
+      vgr_drop: "picking up and transporting the workpiece from the ${start} to the ${end}"
+      vgr_move_empty: "picking up and transporting the workpiece from the ${start} to the ${end}"
+  vgr_sub_task:
+    running:
+      vgr_pick_up: "picking up the workpiece from the ${start}"
+      vgr_drop: "dropping off the workpiece at the ${end}"
+      vgr_move_empty: "picking up the workpiece from the ${start}"
+  # Oven and workstation transport share one controller, and the transport writes its task into
+  # the oven's fields (machine 1 in oven_and_wt_txts.py): OV_1 shows both, WT_1 always "".
+  ov_task:
+    running:
+      ov_drive_in: "burning the workpiece for ${time} seconds"
+      ov_burn: "burning the workpiece for ${time} seconds"
+      ov_burn_empty: "burning the workpiece for ${time} seconds"
+      wt_pick_up: "picking up and transporting the workpiece from the ${start} to the ${end}"
+      wt_drop: "picking up and transporting the workpiece from the ${start} to the ${end}"
+      wt_move_empty: "picking up and transporting the workpiece from the ${start} to the ${end}"
+  ov_sub_task:
+    running:
+      ov_drive_in: "transporting the workpiece to the inside of the oven"
+      ov_burn: "burning the workpiece for ${time} seconds"
+      ov_burn_empty: "burning the workpiece for ${time} seconds"
+      wt_pick_up: "picking up the workpiece from the ${start}"
+      wt_drop: "dropping off the workpiece at the ${end}"
+      wt_move_empty: "picking up the workpiece from the ${start}"
+  mm_task:
+    running:
+      mm_mill: &mm_task "transporting the workpiece from the ${start} to the mill, milling it for ${time} seconds and transporting it to the ${end} afterwards"
+      mm_eject: *mm_task
+      mm_belt: *mm_task
+      mm_turn_back: *mm_task
+      mm_return: *mm_task
+      mm_mill_empty: *mm_task
+  mm_sub_task:
+    running:
+      mm_mill: "milling the workpiece for ${time} seconds"
+      mm_eject: "ejecting the workpiece to the conveyor belt"
+      mm_belt: "transporting the workpiece to the sorting machine"
+      mm_turn_back: "moving towards the initial position"
+      mm_return: "moving towards the initial position"
+      mm_mill_empty: "milling the workpiece for ${time} seconds"
+  # detect_color sets no task, only a sub-task; sort describes itself (the controller writes
+  # "predefined ejection location none" when sorting by colour, too)
+  sm_task:
+    running:
+      sm_sort_white: &sm_task "sorting the workpiece which is located at ${start} without using the nfc reader into the predefined ejection location ${predefined_ejection_location}"
+      sm_sort_red: *sm_task
+      sm_sort_blue: *sm_task
+      sm_sort_predefined: *sm_task
+      sm_sort_predefined_from_sensor: *sm_task
+  sm_sub_task:
+    running:
+      sm_detect: "detecting the workpiece color"
+      sm_detect_at_sensor: "detecting the workpiece color"
+      sm_detect_nothing: "detecting the workpiece color"
+      sm_sort_white: "ejecting the workpiece to the sink 1"
+      sm_sort_red: "ejecting the workpiece to the sink 2"
+      sm_sort_blue: "ejecting the workpiece to the sink 3"
+      sm_sort_predefined: "ejecting the workpiece to the ${predefined_ejection_location}"
+      sm_sort_predefined_from_sensor: "ejecting the workpiece to the ${predefined_ejection_location}"
 
 # ---- the factory's own HTTP API ----
 
@@ -495,6 +612,113 @@ http:
       reads: sm_state
       body: '[{"state": "${read}"}]'
 
+    # motor speeds: answered right away, also while the machine works (getter/setter queue)
+    vgr_get_motor_speed:
+      get: /vgr/get_motor_speed
+      parameters:
+        machine: {required: true, values: [vgr_1], missing: *no_machine, invalid: *wrong_machine}
+        motor: {required: true, values: [1, 2, 3], missing: *wrong_machine, invalid: *no_motor}
+      reads: vgr_m${motor}_speed
+      body: '[{"motor_speed": ${read}}]'
+    vgr_set_motor_speed:
+      get: /vgr/set_motor_speed
+      parameters:
+        machine: {required: true, values: [vgr_1], missing: *no_machine, invalid: *wrong_machine}
+        motor: {required: true, values: [1, 2, 3], missing: *wrong_machine, invalid: *no_motor}
+        speed: {required: true, integer: true, missing: *wrong_machine, invalid: *not_an_integer}
+      sets: {"vgr_m${motor}_speed": "${speed}"}
+      body: '[]'
+    vgr_reset_all_motor_speeds:
+      get: /vgr/reset_all_motor_speeds
+      parameters:
+        machine: {required: true, values: [vgr_1], missing: *no_machine, invalid: *wrong_machine}
+      resets: [vgr_m1_speed, vgr_m2_speed, vgr_m3_speed]
+      body: '[]'
+    ov_get_motor_speed:
+      get: /ov/get_motor_speed
+      parameters:
+        machine: {required: true, values: [ov_1], missing: *no_machine, invalid: *wrong_machine}
+        motor: {required: true, values: [1], missing: *wrong_machine, invalid: *no_motor}
+      reads: ov_m${motor}_speed
+      body: '[{"motor_speed": ${read}}]'
+    ov_set_motor_speed:
+      get: /ov/set_motor_speed
+      parameters:
+        machine: {required: true, values: [ov_1], missing: *no_machine, invalid: *wrong_machine}
+        motor: {required: true, values: [1], missing: *wrong_machine, invalid: *no_motor}
+        speed: {required: true, integer: true, missing: *wrong_machine, invalid: *not_an_integer}
+      sets: {"ov_m${motor}_speed": "${speed}"}
+      body: '[]'
+    ov_reset_all_motor_speeds:
+      get: /ov/reset_all_motor_speeds
+      parameters:
+        machine: {required: true, values: [ov_1], missing: *no_machine, invalid: *wrong_machine}
+      resets: [ov_m1_speed]
+      body: '[]'
+    wt_get_motor_speed:
+      get: /wt/get_motor_speed
+      parameters:
+        machine: {required: true, values: [wt_1], missing: *no_machine, invalid: *wrong_machine}
+        motor: {required: true, values: [2], missing: *wrong_machine, invalid: *no_motor}
+      reads: wt_m${motor}_speed
+      body: '[{"motor_speed": ${read}}]'
+    wt_set_motor_speed:
+      get: /wt/set_motor_speed
+      parameters:
+        machine: {required: true, values: [wt_1], missing: *no_machine, invalid: *wrong_machine}
+        motor: {required: true, values: [2], missing: *wrong_machine, invalid: *no_motor}
+        speed: {required: true, integer: true, missing: *wrong_machine, invalid: *not_an_integer}
+      sets: {"wt_m${motor}_speed": "${speed}"}
+      body: '[]'
+    wt_reset_all_motor_speeds:
+      get: /wt/reset_all_motor_speeds
+      parameters:
+        machine: {required: true, values: [wt_1], missing: *no_machine, invalid: *wrong_machine}
+      resets: [wt_m2_speed]
+      body: '[]'
+    mm_get_motor_speed:
+      get: /mm/get_motor_speed
+      parameters:
+        machine: {required: true, values: [mm_1], missing: *no_machine, invalid: *wrong_machine}
+        motor: {required: true, values: [1, 2, 3], missing: *wrong_machine, invalid: *no_motor}
+      reads: mm_m${motor}_speed
+      body: '[{"motor_speed": ${read}}]'
+    mm_set_motor_speed:
+      get: /mm/set_motor_speed
+      parameters:
+        machine: {required: true, values: [mm_1], missing: *no_machine, invalid: *wrong_machine}
+        motor: {required: true, values: [1, 2, 3], missing: *wrong_machine, invalid: *no_motor}
+        speed: {required: true, integer: true, missing: *wrong_machine, invalid: *not_an_integer}
+      sets: {"mm_m${motor}_speed": "${speed}"}
+      body: '[]'
+    mm_reset_all_motor_speeds:
+      get: /mm/reset_all_motor_speeds
+      parameters:
+        machine: {required: true, values: [mm_1], missing: *no_machine, invalid: *wrong_machine}
+      resets: [mm_m1_speed, mm_m2_speed, mm_m3_speed]
+      body: '[]'
+    sm_get_motor_speed:
+      get: /sm/get_motor_speed
+      parameters:
+        machine: {required: true, values: [sm_1], missing: *no_machine, invalid: *wrong_machine}
+        motor: {required: true, values: [1], missing: *wrong_machine, invalid: *no_motor}
+      reads: sm_m${motor}_speed
+      body: '[{"motor_speed": ${read}}]'
+    sm_set_motor_speed:
+      get: /sm/set_motor_speed
+      parameters:
+        machine: {required: true, values: [sm_1], missing: *no_machine, invalid: *wrong_machine}
+        motor: {required: true, values: [1], missing: *wrong_machine, invalid: *no_motor}
+        speed: {required: true, integer: true, missing: *wrong_machine, invalid: *not_an_integer}
+      sets: {"sm_m${motor}_speed": "${speed}"}
+      body: '[]'
+    sm_reset_all_motor_speeds:
+      get: /sm/reset_all_motor_speeds
+      parameters:
+        machine: {required: true, values: [sm_1], missing: *no_machine, invalid: *wrong_machine}
+      resets: [sm_m1_speed]
+      body: '[]'
+
 # ---- the factory's MQTT status messages: each station's full state twice per second ----
 
 events:
@@ -506,7 +730,7 @@ events:
       "i7_light_barrier": ${sensor.vgr_i7}, "i4_light_barrier": ${sensor.vgr_i4}, "i8_color_sensor": 1575,
       "o7_compressor_level": ${sensor.vgr_motor}, "o8_valve_open": ${sensor.vgr_motor},
       "m1_speed": ${sensor.vgr_motor}, "m2_speed": ${sensor.vgr_motor}, "m3_speed": ${sensor.vgr_motor},
-      "current_state": "${sensor.vgr_state}", "current_task": "", "current_task_duration": 0, "current_sub_task": "",
+      "current_state": "${sensor.vgr_state}", "current_task": "${sensor.vgr_task}", "current_task_duration": 0, "current_sub_task": "${sensor.vgr_sub_task}",
       "current_pos_x": 0, "current_pos_y": 0, "current_pos_z": 0,
       "target_pos_x": 0, "target_pos_y": 0, "target_pos_z": 0}
   - mqtt: FTFactory/OV_1
@@ -515,7 +739,7 @@ events:
       {"id": "${uuid}", "station": "OV_1", "timestamp": "${now|yyyy-MM-dd HH:mm:ss.SS}",
       "i1_pos_switch": ${sensor.ov_i1}, "i2_pos_switch": 0, "i5_light_barrier": ${sensor.ov_i5},
       "m1_speed": ${sensor.ov_motor}, "o7_valve": 0, "o8_compressor": 0,
-      "current_state": "${sensor.ov_state}", "current_task": "", "current_task_duration": 0, "current_sub_task": ""}
+      "current_state": "${sensor.ov_state}", "current_task": "${sensor.ov_task}", "current_task_duration": 0, "current_sub_task": "${sensor.ov_sub_task}"}
   - mqtt: FTFactory/WT_1
     every: 500ms
     payload: >-
@@ -529,7 +753,7 @@ events:
       {"id": "${uuid}", "station": "MM_1", "timestamp": "${now|yyyy-MM-dd HH:mm:ss.SS}",
       "i1_pos_switch": ${sensor.mm_i1}, "i2_pos_switch": 0, "i3_pos_switch": 0, "i4_light_barrier": ${sensor.mm_i4},
       "m1_speed": ${sensor.mm_motor}, "m2_speed": 0, "m3_speed": ${sensor.mm_motor}, "o7_valve": 0, "o8_compressor": 0,
-      "current_state": "${sensor.mm_state}", "current_task": "", "current_task_duration": 0, "current_sub_task": ""}
+      "current_state": "${sensor.mm_state}", "current_task": "${sensor.mm_task}", "current_task_duration": 0, "current_sub_task": "${sensor.mm_sub_task}"}
   - mqtt: FTFactory/SM_1
     every: 500ms
     payload: >-
@@ -537,4 +761,4 @@ events:
       "i1_light_barrier": ${sensor.sm_i1}, "i2_color_sensor": ${sensor.sm_i2}, "i3_light_barrier": ${sensor.sm_i3},
       "i6_light_barrier": ${sensor.sm_i6}, "i7_light_barrier": ${sensor.sm_i7}, "i8_light_barrier": ${sensor.sm_i8},
       "m1_speed": ${sensor.sm_motor}, "o5_valve": 0, "o6_valve": 0, "o7_valve": 0, "o8_compressor": 0,
-      "current_state": "${sensor.sm_state}", "current_task": "", "current_task_duration": 0, "current_sub_task": ""}
+      "current_state": "${sensor.sm_state}", "current_task": "${sensor.sm_task}", "current_task_duration": 0, "current_sub_task": "${sensor.sm_sub_task}"}

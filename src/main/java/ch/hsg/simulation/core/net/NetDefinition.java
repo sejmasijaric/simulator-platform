@@ -27,7 +27,8 @@ public record NetDefinition(
         HttpInterface http,
         List<EventTopic> events,
         Image image,
-        List<TokenTemplate> tokenTemplates) {
+        List<TokenTemplate> tokenTemplates,
+        List<Setting> settings) {
 
     /** No capacity limit. */
     public static final int UNLIMITED = 0;
@@ -94,7 +95,17 @@ public record NetDefinition(
      */
     public record Transition(String name, List<Arc> inputs, List<Arc> outputs, Duration duration,
                              String durationParameter, Duration durationPerUnit, Map<String, String> guard,
-                             List<String> inhibitors, Map<String, String> result, int priority, String module) {
+                             List<String> inhibitors, Map<String, String> result, int priority, String module,
+                             Speed speed) {
+
+        /** Without a motor speed: the duration is fixed. */
+        public Transition(String name, List<Arc> inputs, List<Arc> outputs, Duration duration,
+                          String durationParameter, Duration durationPerUnit, Map<String, String> guard,
+                          List<String> inhibitors, Map<String, String> result, int priority, String module) {
+            this(name, inputs, outputs, duration, durationParameter, durationPerUnit, guard, inhibitors, result,
+                    priority, module, null);
+        }
+
         public Transition {
             requireName(name, "transition");
             inputs = List.copyOf(inputs);
@@ -134,9 +145,61 @@ public record NetDefinition(
             }
         }
 
+        /**
+         * The base {@code duration} at the current motor speed: {@code duration × reference / speed}, where
+         * speed is the slowest (smallest absolute value) of the speed's settings. The per-unit part is not
+         * motor time and stays as it is. Empty when a motor stands still (speed 0): the step cannot run.
+         */
+        public java.util.Optional<Duration> baseDurationAt(Map<String, Integer> settings) {
+            if (speed == null) {
+                return java.util.Optional.of(duration);
+            }
+            int slowest = speed.settings().stream()
+                    .mapToInt(setting -> Math.abs(settings.getOrDefault(setting, speed.reference())))
+                    .min().orElse(speed.reference());
+            if (slowest == 0) {
+                return java.util.Optional.empty();
+            }
+            return java.util.Optional.of(Duration.ofNanos(Math.round(duration.toNanos() * (double) speed.reference() / slowest)));
+        }
+
         /** A transition without guard, inhibitors, result or parameter-dependent duration. */
         public static Transition of(String name, List<Arc> inputs, List<Arc> outputs, Duration duration) {
             return new Transition(name, inputs, outputs, duration, null, null, null, null, null, 0, null);
+        }
+    }
+
+    /**
+     * The motors a transition's base duration depends on: the settings holding their speeds and the
+     * speed the declared duration was measured at ({@code reference}, e.g. 512).
+     */
+    public record Speed(List<String> settings, int reference) {
+        public Speed {
+            settings = List.copyOf(settings);
+            if (settings.isEmpty()) {
+                throw new IllegalArgumentException("A speed needs at least one setting");
+            }
+            if (reference <= 0) {
+                throw new IllegalArgumentException("A speed reference must be positive");
+            }
+        }
+    }
+
+    /**
+     * A whole-number value an application can change through the layout's API, e.g. a motor speed.
+     * Writes are clamped to {@code min}..{@code max}, like the physical controllers do; a reset goes
+     * back to {@code initial}.
+     */
+    public record Setting(String name, int initial, int min, int max, String module) {
+        public Setting {
+            requireName(name, "setting");
+            if (min > max || initial < min || initial > max) {
+                throw new IllegalArgumentException("Setting " + name + ": needs min <= initial <= max");
+            }
+        }
+
+        public int clamp(int value) {
+            return Math.max(min, Math.min(max, value));
         }
     }
 
@@ -149,7 +212,13 @@ public record NetDefinition(
         /** number of tokens in {@code place}. */
         COUNT,
         /** {@code attribute} of the first token in {@code place}, or null if empty. */
-        ATTRIBUTE
+        ATTRIBUTE,
+        /**
+         * Text of the step that is running now: {@code running} maps transitions to text templates,
+         * filled from the firing's request parameters; {@code ""} while none of them fires. E.g. the
+         * {@code current_task} a controller publishes.
+         */
+        RUNNING
     }
 
     /**
@@ -157,11 +226,24 @@ public record NetDefinition(
      * (as text: {@code true}, {@code 3}, {@code red}, {@code null}) to what the hardware reports,
      * e.g. {@code {true: 0, false: 1}} for a raw light barrier.
      */
-    public record Sensor(String name, SensorKind kind, String place, String attribute, Map<String, Object> values) {
+    public record Sensor(String name, SensorKind kind, String place, String attribute, Map<String, Object> values,
+                         Map<String, String> running) {
+
+        public Sensor(String name, SensorKind kind, String place, String attribute, Map<String, Object> values) {
+            this(name, kind, place, attribute, values, null);
+        }
+
         public Sensor {
             requireName(name, "sensor");
             Objects.requireNonNull(kind, "kind");
-            requireName(place, "sensor place");
+            running = running == null ? Map.of() : unmodifiable(running);
+            if (kind == SensorKind.RUNNING) {
+                if (running.isEmpty()) {
+                    throw new IllegalArgumentException("Sensor " + name + " needs the transitions it shows");
+                }
+            } else {
+                requireName(place, "sensor place");
+            }
             if (kind == SensorKind.ATTRIBUTE && (attribute == null || attribute.isBlank())) {
                 throw new IllegalArgumentException("Sensor " + name + " needs an attribute");
             }
@@ -193,7 +275,9 @@ public record NetDefinition(
         /** Puts a request token into {@code command} and answers after {@code returnsAfter} fired for it. */
         COMMAND,
         /** Reads sensors and fires nothing. */
-        QUERY
+        QUERY,
+        /** Changes settings ({@code sets}, {@code resets}), e.g. a motor speed, and fires nothing. */
+        SETTING
     }
 
     /**
@@ -203,7 +287,14 @@ public record NetDefinition(
      * possibly a template ({@code sm_lb${lb}}). {@code body} is the response body template.
      */
     public record Route(String name, RouteKind kind, String method, String path, List<Parameter> parameters,
-                        String command, List<String> returnsAfter, Duration timeout, String reads, String body) {
+                        String command, List<String> returnsAfter, Duration timeout, String reads, String body,
+                        Map<String, String> sets, List<String> resets) {
+
+        public Route(String name, RouteKind kind, String method, String path, List<Parameter> parameters,
+                     String command, List<String> returnsAfter, Duration timeout, String reads, String body) {
+            this(name, kind, method, path, parameters, command, returnsAfter, timeout, reads, body, null, null);
+        }
+
         public Route {
             requireName(name, "route");
             Objects.requireNonNull(kind, "kind");
@@ -211,8 +302,13 @@ public record NetDefinition(
             requireName(path, "route path");
             parameters = parameters == null ? List.of() : List.copyOf(parameters);
             returnsAfter = returnsAfter == null ? List.of() : List.copyOf(returnsAfter);
+            sets = sets == null ? Map.of() : unmodifiable(sets);
+            resets = resets == null ? List.of() : List.copyOf(resets);
             if (kind == RouteKind.COMMAND) {
                 requireName(command, "route " + name + " command place");
+            }
+            if (kind == RouteKind.SETTING && sets.isEmpty() && resets.isEmpty()) {
+                throw new IllegalArgumentException("Route " + name + " needs sets or resets");
             }
         }
     }
@@ -273,12 +369,20 @@ public record NetDefinition(
         http = http == null ? HttpInterface.none() : http;
         events = events == null ? List.of() : List.copyOf(events);
         tokenTemplates = tokenTemplates == null ? List.of() : List.copyOf(tokenTemplates);
-        validate(id, places, transitions, sensors, http, image);
+        settings = settings == null ? List.of() : List.copyOf(settings);
+        validate(id, places, transitions, sensors, http, image, settings);
+    }
+
+    /** A layout without settings. */
+    public NetDefinition(String id, String name, String description, List<Place> places, List<Transition> transitions,
+                         List<Sensor> sensors, HttpInterface http, List<EventTopic> events, Image image,
+                         List<TokenTemplate> tokenTemplates) {
+        this(id, name, description, places, transitions, sensors, http, events, image, tokenTemplates, null);
     }
 
     /** A net without interface, picture or templates, e.g. for tests. */
     public static NetDefinition of(String id, List<Place> places, List<Transition> transitions, List<Sensor> sensors) {
-        return new NetDefinition(id, null, null, places, transitions, sensors, null, null, null, null);
+        return new NetDefinition(id, null, null, places, transitions, sensors, null, null, null, null, null);
     }
 
     public List<Route> routes() {
@@ -297,6 +401,10 @@ public record NetDefinition(
         return sensors.stream().filter(sensor -> sensor.name().equals(sensorName)).findFirst();
     }
 
+    public Optional<Setting> setting(String settingName) {
+        return settings.stream().filter(setting -> setting.name().equals(settingName)).findFirst();
+    }
+
     public Optional<Route> route(String routeName) {
         return routes().stream().filter(route -> route.name().equals(routeName)).findFirst();
     }
@@ -307,8 +415,14 @@ public record NetDefinition(
     }
 
     private static void validate(String id, List<Place> places, List<Transition> transitions, List<Sensor> sensors,
-                                 HttpInterface http, Image image) {
+                                 HttpInterface http, Image image, List<Setting> settings) {
         List<String> problems = new ArrayList<>();
+        Set<String> settingNames = new HashSet<>();
+        for (Setting setting : settings) {
+            if (!settingNames.add(setting.name())) {
+                problems.add("setting " + setting.name() + " is declared twice");
+            }
+        }
         Map<String, Place> byName = new LinkedHashMap<>();
         for (Place place : places) {
             if (byName.put(place.name(), place) != null) {
@@ -331,14 +445,26 @@ public record NetDefinition(
                     problems.add("transition " + transition.name() + " is inhibited by unknown place " + inhibitor);
                 }
             }
+            if (transition.speed() != null) {
+                for (String setting : transition.speed().settings()) {
+                    if (!settingNames.contains(setting)) {
+                        problems.add("transition " + transition.name() + " depends on unknown setting " + setting);
+                    }
+                }
+            }
         }
         Set<String> sensorNames = new HashSet<>();
         for (Sensor sensor : sensors) {
             if (!sensorNames.add(sensor.name())) {
                 problems.add("sensor " + sensor.name() + " is declared twice");
             }
-            if (!byName.containsKey(sensor.place())) {
+            if (sensor.kind() != SensorKind.RUNNING && !byName.containsKey(sensor.place())) {
                 problems.add("sensor " + sensor.name() + " reads unknown place " + sensor.place());
+            }
+            for (String transition : sensor.running().keySet()) {
+                if (!transitionNames.contains(transition)) {
+                    problems.add("sensor " + sensor.name() + " shows unknown transition " + transition);
+                }
             }
         }
         Set<String> routeNames = new HashSet<>();
@@ -358,8 +484,19 @@ public record NetDefinition(
                     problems.add("route " + route.name() + " returns after unknown transition " + transition);
                 }
             }
-            if (route.reads() != null && !route.reads().contains("${") && !sensorNames.contains(route.reads())) {
-                problems.add("route " + route.name() + " reads unknown sensor " + route.reads());
+            if (route.reads() != null && !route.reads().contains("${") && !sensorNames.contains(route.reads())
+                    && !settingNames.contains(route.reads())) {
+                problems.add("route " + route.name() + " reads unknown sensor or setting " + route.reads());
+            }
+            for (String setting : route.sets().keySet()) {
+                if (!Templates.isTemplate(setting) && !settingNames.contains(setting)) {
+                    problems.add("route " + route.name() + " sets unknown setting " + setting);
+                }
+            }
+            for (String setting : route.resets()) {
+                if (!settingNames.contains(setting)) {
+                    problems.add("route " + route.name() + " resets unknown setting " + setting);
+                }
             }
         }
         if (image != null) {

@@ -1,11 +1,14 @@
-import type { EventTopic, NetDefinition, Snapshot } from './types';
-import { formatValue, modulesOf, moduleOfSensor, sensorsIn } from './net';
+import { useState } from 'react';
+import type { EventTopic, NetDefinition, Setting, Snapshot } from './types';
+import { formatValue, modulesOf, moduleOfSensor, outOfService, sensorsIn } from './net';
 
 interface Props {
   net: NetDefinition;
   snapshot: Snapshot;
   onSelectSensor: (sensor: string) => void;
   onModules: (modules: string[]) => void;
+  onSetSetting: (setting: string, value: number) => void;
+  onResetSetting: (setting: string) => void;
 }
 
 interface Field { key: string; value: unknown; sensor: string | null }
@@ -49,7 +52,7 @@ function render(event: EventTopic, sensors: Record<string, unknown>): { fields: 
  * One card per station of the physical factory: the MQTT message it publishes, with every
  * component grouped as the factory reports them, plus the station's other sensors.
  */
-export function StationsPanel({ net, snapshot, onSelectSensor, onModules }: Props) {
+export function StationsPanel({ net, snapshot, onSelectSensor, onModules, onSetSetting, onResetSetting }: Props) {
   const modules = modulesOf(net);
   const published = new Set(net.events.flatMap((e) => sensorsIn(e.payload)));
   const topicModule = (event: EventTopic) => {
@@ -88,7 +91,9 @@ export function StationsPanel({ net, snapshot, onSelectSensor, onModules }: Prop
               <b>{module ? module.toUpperCase() : 'Other'}</b>
               <span className="mono tiny muted">{topics.map((t) => t.topic).join(', ')}</span>
               <span style={{ flex: 1 }} />
-              {state !== undefined && <span className={`chip ${state === 'ready' ? 'running' : 'paused'}`}>{formatValue(state)}</span>}
+              {outOfService(net, snapshot, module)
+                ? <span className="chip out" title={`No token in ${module}_in_service: the station does not work, as in the lab`}>out of service</span>
+                : state !== undefined && <span className={`chip ${state === 'ready' ? 'running' : 'paused'}`}>{formatValue(state)}</span>}
               {module && (
                 <label className="switch-label" onClick={(e) => e.stopPropagation()} title="Switch the station off to test the others on their own">
                   <input type="checkbox" checked={isOn(module)} onChange={() => toggle(module)} /> runs
@@ -125,6 +130,18 @@ export function StationsPanel({ net, snapshot, onSelectSensor, onModules }: Prop
               );
             })}
 
+            {net.settings.some((s) => s.module === module) && (
+              <div className="field-group">
+                <div className="field-group-title">Motor speeds · −512…512, steps take 512 / speed as long; also set over HTTP</div>
+                <div className="fields">
+                  {net.settings.filter((s) => s.module === module).map((s) => (
+                    <SettingRow key={s.name} setting={s} value={snapshot.settings[s.name] ?? s.initial}
+                                onSet={(v) => onSetSetting(s.name, v)} onReset={() => onResetSetting(s.name)} />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {others.length > 0 && (
               <div className="field-group">
                 <div className="field-group-title">Other sensors · read over HTTP</div>
@@ -154,4 +171,22 @@ function FieldRow({ field, snapshot, onSelect }: { field: Field; snapshot: Snaps
   return field.sensor
     ? <button className={`field live ${fault ? 'faulty' : ''}`} onClick={() => onSelect(field.sensor!)} title={`from sensor ${field.sensor}`}><span className="live-dot" />{content}</button>
     : <div className="field fixed"><span className="live-dot off" />{content}</div>;
+}
+
+function SettingRow({ setting, value, onSet, onReset }: { setting: Setting; value: number; onSet: (value: number) => void; onReset: () => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const changed = value !== setting.initial;
+  const submit = () => {
+    if (draft !== null && draft.trim() !== '' && !Number.isNaN(Number(draft))) onSet(Math.round(Number(draft)));
+    setDraft(null);
+  };
+  return (
+    <div className={`field setting ${changed ? 'changed' : ''}`}>
+      <span className="mono key">{setting.name}</span>
+      <input className="mono" value={draft ?? String(value)} inputMode="numeric" aria-label={setting.name}
+             onChange={(e) => setDraft(e.target.value)} onBlur={submit}
+             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setDraft(null); }} />
+      {changed && <button className="ghost icon" title={`Back to ${setting.initial}`} onClick={onReset}>↺</button>}
+    </div>
+  );
 }

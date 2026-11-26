@@ -114,9 +114,11 @@ public final class LayoutHttpApi {
             if (control.snapshot(simulation).speed() == null) {
                 control.setSpeed(simulation, 1.0);
             }
-            return Optional.of(route.kind() == RouteKind.COMMAND
-                    ? command(endpoint, simulation, parameters, request, started)
-                    : query(endpoint, simulation, parameters, request, started));
+            return Optional.of(switch (route.kind()) {
+                case COMMAND -> command(endpoint, simulation, parameters, request, started);
+                case QUERY -> query(endpoint, simulation, parameters, request, started);
+                case SETTING -> setting(endpoint, simulation, parameters, request, started);
+            });
         } catch (NotFoundException | SimulationException exception) {
             return Optional.of(json(503, exception.getMessage()));
         } catch (IllegalArgumentException exception) {
@@ -161,12 +163,43 @@ public final class LayoutHttpApi {
                 .with("request.url", request.url())
                 .times(started, LocalDateTime.now(clock));
         if (route.reads() != null) {
-            String sensor = Templates.render(route.reads(), values);
-            if (!sensors.containsKey(sensor)) {
-                return json(400, "Route " + route.name() + " reads unknown sensor " + sensor);
+            String name = Templates.render(route.reads(), values);
+            if (sensors.containsKey(name)) {
+                values.with("read", sensors.get(name));
+            } else if (endpoint.layout().setting(name).isPresent()) {
+                values.with("read", control.snapshot(simulation).settings().get(name));
+            } else {
+                return json(400, "Route " + route.name() + " reads unknown sensor or setting " + name);
             }
-            values.with("read", sensors.get(sensor));
         }
+        return success(endpoint, route, values);
+    }
+
+    /** Changes settings (e.g. a motor speed); nothing fires because of it, but waiting steps may now start. */
+    private Response setting(Endpoint endpoint, UUID simulation, Map<String, Object> parameters, Request request,
+                             LocalDateTime started) {
+        Route route = endpoint.route();
+        TemplateValues values = new TemplateValues().parameters(parameters);
+        for (Map.Entry<String, String> set : route.sets().entrySet()) {
+            String name = Templates.render(set.getKey(), values);
+            String value = Templates.render(set.getValue(), values);
+            if (endpoint.layout().setting(name).isEmpty()) {
+                return json(400, "Route " + route.name() + " sets unknown setting " + name);
+            }
+            int number;
+            try {
+                number = Integer.parseInt(value.trim());
+            } catch (NumberFormatException exception) {
+                return json(500, "invalid literal for int() with base 10: '" + value + "'");
+            }
+            control.setSetting(simulation, name, number, ORIGIN);
+        }
+        if (!route.resets().isEmpty()) {
+            control.resetSettings(simulation, route.resets(), ORIGIN);
+        }
+        values.sensors(() -> control.readSensors(simulation))
+                .with("request.url", request.url())
+                .times(started, LocalDateTime.now(clock));
         return success(endpoint, route, values);
     }
 

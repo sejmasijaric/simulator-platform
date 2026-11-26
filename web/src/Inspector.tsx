@@ -213,6 +213,7 @@ function SensorPanel({ net, snapshot, selection, actions }: Props) {
   if (!sensor) return <p className="muted small">Unknown sensor.</p>;
   const fault = snapshot.sensorFaults[sensor.name];
   const derives = sensor.kind === 'OCCUPIED' ? 'whether something is in' : sensor.kind === 'COUNT' ? 'how many tokens are in' : `the ${sensor.attribute} of what is in`;
+  const steps = Object.keys(sensor.running ?? {});
   const routes = net.http.routes.filter((r) => r.reads === sensor.name
     || (r.reads && isTemplate(r.reads) && sensor.name.startsWith(r.reads.split('${')[0])));
   const topics = net.events.filter((e) => e.payload.includes(`\${sensor.${sensor.name}}`));
@@ -225,7 +226,9 @@ function SensorPanel({ net, snapshot, selection, actions }: Props) {
   return (
     <>
       <div className="big-value mono">{formatValue(snapshot.sensors[sensor.name])}{fault && <span className="chip warn">{fault.type.toLowerCase()}</span>}</div>
-      <p className="lead">Shows {derives} <Link selection={{ kind: 'place', name: sensor.place }} actions={actions} />.</p>
+      {sensor.kind === 'RUNNING'
+        ? <p className="lead">Shows the task text of the step that is running: <Links names={steps} kind="transition" actions={actions} />; empty while none runs.</p>
+        : <p className="lead">Shows {derives} <Link selection={{ kind: 'place', name: sensor.place }} actions={actions} />.</p>}
       {Object.keys(sensor.values).length > 0 && (
         <p className="small muted">Reported as {Object.entries(sensor.values).map(([k, v]) => `${k} → ${formatValue(v)}`).join(' · ')}</p>
       )}

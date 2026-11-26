@@ -15,7 +15,7 @@ mvn spring-boot:run                                   # terminal 1, UI on http:/
 python3 applications/fischertechnik/lab_process.py --setup   # terminal 2
 ```
 
-Open http://localhost:8080 and the running Fischertechnik simulation to watch the workpiece move. Each step prints the factory's `process_time`; the light barriers are read between steps.
+Open the Fischertechnik simulation in the UI first: `--setup` uses that one and puts the workpiece in (it creates a simulation only if none is running, and never stops one; with several running, choose with `--simulation <id>`, shown in the UI's top bar). Watch the workpiece move. Each step prints the factory's `process_time`; the light barriers are read between steps.
 
 To watch the status messages the factory publishes, start the simulator with `docker compose up` and run `mosquitto_sub -h localhost -t 'FTFactory/#' -v`.
 

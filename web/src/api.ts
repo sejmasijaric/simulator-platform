@@ -49,6 +49,10 @@ export const api = {
   clearNetFault: (id: string, transition: string) =>
     request<Snapshot>('DELETE', `${sim(id)}/faults/transitions/${transition}`),
 
+  setSetting: (id: string, setting: string, value: number) =>
+    request<Snapshot>('PUT', `${sim(id)}/settings/${setting}`, { value }),
+  resetSetting: (id: string, setting: string) => request<Snapshot>('DELETE', `${sim(id)}/settings/${setting}`),
+
   setModules: (id: string, modules: string[]) => request<Snapshot>('PUT', `${sim(id)}/modules`, { modules }),
 
   /** Puts a request token into a command place, as the layout's API would, without waiting for it. */

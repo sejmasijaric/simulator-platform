@@ -1,6 +1,6 @@
 # Simulation Platform
 
-Simulation of physical lab layouts (Fischertechnik Factory 4.0; Dobot + conveyor next). An application that works against the simulator works against the physical layout without changes.
+Simulation of physical lab layouts (Fischertechnik Factory 4.0; Dobot + conveyor, first version). An application that works against the simulator works against the physical layout without changes.
 
 Each layout is a **timed, coloured Petri net in a YAML file**: places for positions, machine states and request queues, transitions for what the machines can do, sensors derived from where the tokens are, and the layout's own HTTP API and MQTT messages. One generic core runs any such file; no layout needs Java code.
 
@@ -12,9 +12,11 @@ Each layout is a **timed, coloured Petri net in a YAML file**: places for positi
 
 ## Status
 
-- Implemented: the Petri net core (guards, inhibitor arcs, parameter-dependent durations, results), generic faults on sensor and net level, the YAML loader, the REST control API, the generic layout HTTP API and MQTT publisher, and the Fischertechnik factory as [fischertechnik.yaml](src/main/resources/layouts/fischertechnik.yaml).
-- Web UI on the Petri net: the marking on the photo of the layout (workpieces, machines, sensors), inspector for places, transitions and sensors with fault controls, the layout's API to try commands, module switches, trace. The nets themselves are documented as generated pictures.
-- Next: model the Dobot + conveyor in YAML; validate timings against lab recordings.
+- Implemented: the Petri net core (guards, inhibitor arcs, parameter-dependent durations, results, settings such as motor speeds, sensors for the running step), generic faults on sensor and net level, the YAML loader, the REST control API, the generic layout HTTP API and MQTT publisher, and the Fischertechnik factory as [fischertechnik.yaml](src/main/resources/layouts/fischertechnik.yaml).
+- Fischertechnik factory: its own HTTP API and MQTT messages as the lab's applications use them, including motor speeds and the controllers' task texts; the warehouse is out of service, as in the lab. What is and is not simulated: [ADR 0016](docs/adr/0016-fischertechnik-factory-scope.md).
+- Web UI: the factory photo with live workpieces, machines and sensors; an inspector for places, transitions and sensors with fault controls; the layout's HTTP API to try requests; each station's MQTT message and motor speeds; the trace.
+- Dobot + conveyor: first version as [dobot.yaml](src/main/resources/layouts/dobot.yaml), with no change to the core; see [applying-the-simulator.md](docs/layouts/dobot/applying-the-simulator.md).
+- Next: calibrate durations, motor-speed scaling and MQTT fields with lab recordings; the Dobot's conveyor, second arm and durations from the lab.
 - Example application: [applications](applications/README.md).
 
 ## Packages (`ch.hsg.simulation`)

@@ -79,11 +79,24 @@ public final class NetInterpreter {
      */
     public Optional<Firing> next(Marking marking, Faults faults, Set<String> activeModules,
                                  Supplier<String> newTokenId) {
+        return next(marking, faults, activeModules, Map.of(), newTokenId);
+    }
+
+    /**
+     * As above, with the current {@code settings} (e.g. motor speeds) that scale transitions' base
+     * durations. A transition whose motor stands still (speed 0) is not enabled.
+     */
+    public Optional<Firing> next(Marking marking, Faults faults, Set<String> activeModules,
+                                 Map<String, Integer> settings, Supplier<String> newTokenId) {
         for (Transition transition : order) {
             if (faults.isBlocked(transition.name()) || !isActive(transition, activeModules)) {
                 continue;
             }
-            Optional<Firing> firing = tryBind(transition, marking, faults, newTokenId);
+            Optional<Duration> base = transition.baseDurationAt(settings);
+            if (base.isEmpty()) {
+                continue;
+            }
+            Optional<Firing> firing = tryBind(transition, marking, faults, base.get(), newTokenId);
             if (firing.isPresent()) {
                 return firing;
             }
@@ -95,7 +108,7 @@ public final class NetInterpreter {
         return activeModules.isEmpty() || transition.module() == null || activeModules.contains(transition.module());
     }
 
-    private Optional<Firing> tryBind(Transition transition, Marking marking, Faults faults,
+    private Optional<Firing> tryBind(Transition transition, Marking marking, Faults faults, Duration base,
                                      Supplier<String> newTokenId) {
         for (String inhibitor : transition.inhibitors()) {
             if (!Templates.isTemplate(inhibitor) && marking.occupied(inhibitor)) {
@@ -185,7 +198,7 @@ public final class NetInterpreter {
             }
         }
 
-        Duration duration = scaled(durationOf(transition, parameters), faults.durationFactor(transition.name()));
+        Duration duration = scaled(durationOf(transition, base, parameters), faults.durationFactor(transition.name()));
         Map<String, Object> result = new LinkedHashMap<>();
         transition.result().forEach((key, template) -> result.put(key, renderLenient(template, lookup)));
         return Optional.of(new Firing(transition, consumed, produced, lost, duration, commandId, parameters, result));
@@ -260,9 +273,9 @@ public final class NetInterpreter {
         });
     }
 
-    private static Duration durationOf(Transition transition, Map<String, Object> parameters) {
+    private static Duration durationOf(Transition transition, Duration base, Map<String, Object> parameters) {
         if (transition.durationParameter() == null) {
-            return transition.duration();
+            return base;
         }
         Object value = parameters.get(transition.durationParameter());
         double units;
@@ -272,7 +285,7 @@ public final class NetInterpreter {
             units = 0;
         }
         long extra = Math.round(transition.durationPerUnit().toNanos() * Math.max(units, 0));
-        return transition.duration().plusNanos(extra);
+        return base.plusNanos(extra);
     }
 
     private static Duration scaled(Duration duration, double factor) {
